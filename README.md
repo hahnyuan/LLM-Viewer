@@ -1,0 +1,3 @@
+# LLMViewer
+
+Explore the intricate facets of Large Language Models (LLMs) with LLMViewer, a powerful tool designed to provide comprehensive insights into key aspects of model inference. Uncover details such as computational load, data volume, transmission metrics, and hardware roofline model analysis. Whether you're delving into the complexities of computation, assessing massive datasets, evaluating data transmission, or examining the hardware roofline model, LLMViewer offers a user-friendly interface for an in-depth exploration of these critical components in large language model inference. Elevate your understanding of LLMs with this sophisticated visualization tool.
