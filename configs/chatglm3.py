@@ -12,3 +12,5 @@ def get_num_key_value_heads(config):
 
 def get_num_hidden_layers(config):
     return getattr(config, "num_layers")
+
+lm_head_name="output_layer"

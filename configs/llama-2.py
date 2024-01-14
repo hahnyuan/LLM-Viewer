@@ -10,7 +10,4 @@ def get_num_key_value_heads(config):
 def get_num_hidden_layers(config):
     return getattr(config, "num_hidden_layers")
 
-# num_attention_heads_config = "num_attention_heads"
-# hidden_size_config = "hidden_size"
-# num_key_value_heads_config = "num_key_value_heads"
-# num_hidden_layers_config = "num_hidden_layers"
+lm_head_name="lm_head"

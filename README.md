@@ -6,7 +6,9 @@ Explore the intricate facets of Large Language Models (LLMs) with LLMViewer, a p
 
 ```bash
 python3 model_viewer.py facebook/opt-125m configs/opt.py
-python3 model_viewer.py meta-llama/Llama-2-7b-hf configs/llama-2.py
-python3 model_viewer.py THUDM/chatglm3-6b configs/chatglm3.py --seqlen 256
+python3 model_viewer.py meta-llama/Llama-2-7b-hf configs/llama-2.py --batchsize 2
+python3 model_viewer.py THUDM/chatglm3-6b configs/chatglm3.py --seqlen 2048
+
+python3 model_viewer.py meta-llama/Llama-2-13b-hf configs/llama-2.py --batchsize 1 --seqlen 2048
 
 ```
