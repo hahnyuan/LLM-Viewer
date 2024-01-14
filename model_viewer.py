@@ -27,6 +27,9 @@ args = parser.parse_args()
 model_id = args.model_id
 batchsize = args.batchsize
 seqlen = args.seqlen
+# Roofline model
+w_bit = 16
+a_bit = 16
 
 model_config = AutoConfig.from_pretrained(model_id, trust_remote_code=True)
 config = importlib.import_module(args.config_path.replace("/", ".").replace(".py", ""))
@@ -49,6 +52,7 @@ layer_mac_prefill = {}
 layer_load_act_numel_prefill = {}
 layer_store_act_numel_prefill = {}
 kv_cache_numel = {}
+transformer_layer_names = []
 for name, module in model.named_modules():
     if hasattr(module, "weight") and isinstance(module.weight, torch.Tensor):
         layer_weight_numel[name] = module.weight.numel()
@@ -62,12 +66,24 @@ for name, module in model.named_modules():
             layer_load_act_numel_prefill[name] = module.in_features * batchsize
             layer_store_act_numel_prefill[name] = module.out_features * batchsize
         else:
+            transformer_layer_names.append(name)
             layer_mac_prefill[name] = module.weight.numel() * batchsize * seqlen
             layer_load_act_numel_prefill[name] = module.in_features * batchsize * seqlen
             layer_store_act_numel_prefill[name] = (
                 module.out_features * batchsize * seqlen
             )
         num_mlp_act_size = max(num_mlp_act_size, module.in_features)
+
+linear_mac_prefill = sum(layer_mac_prefill.values())
+linear_mac_decode = sum(layer_mac_decode.values())
+linear_mem_access_prefill = (
+    sum(layer_load_act_numel_prefill.values())
+    + sum(layer_store_act_numel_prefill.values())
+) * a_bit + sum(layer_weight_numel.values()) * w_bit
+linear_mem_access_decode = (
+    sum(layer_load_act_numel_decode.values())
+    + sum(layer_store_act_numel_decode.values())
+) * a_bit + sum(layer_weight_numel.values()) * w_bit
 
 # For attention
 for layeri in range(num_hidden_layers):
@@ -208,9 +224,6 @@ for k, v in kv_cache_numel.items():
 kv_cache_file.write(f"total,{total_kv_cache}")
 kv_cache_file.close()
 
-# Roofline model
-w_bit = 16
-a_bit = 16
 
 memory_access_decode = (
     (total_load_act_numel_decode + total_store_act_numel_decode) * a_bit
@@ -251,14 +264,44 @@ def draw_roofline_model(max_mac_per_s, mac, memory_access, name, color):
     plt.vlines(intensity, 0, max_mac_per_s, colors=color, linestyles="dashed")
 
     # rotate annotation
-    plt.annotate(name, xy=(intensity, max_mac_per_s / 2), color=color, rotation=90)
+    plt.annotate(
+        name,
+        xy=(intensity, max_mac_per_s / 2),
+        color=color,
+        rotation=90,
+        ha="center",
+        va="center",
+    )
 
 
 draw_roofline_model(
-    max_mac_per_s, total_mac_decode, memory_access_decode, "decode", "red"
+    max_mac_per_s,
+    total_mac_decode,
+    memory_access_decode,
+    f"decode \n(len={args.seqlen}, bs={args.batchsize})",
+    "red",
 )
 draw_roofline_model(
-    max_mac_per_s, total_mac_prefill, memory_access_prefill, "prefill", "green"
+    max_mac_per_s,
+    total_mac_prefill,
+    memory_access_prefill,
+    f"prefill \n(len={args.seqlen}, bs={args.batchsize})",
+    "green",
+)
+
+draw_roofline_model(
+    max_mac_per_s,
+    linear_mac_decode,
+    linear_mem_access_decode,
+    f"decode linear",
+    "black",
+)
+draw_roofline_model(
+    max_mac_per_s,
+    linear_mac_prefill,
+    linear_mem_access_prefill,
+    f"prefill linear",
+    "black",
 )
 
 plt.savefig(f"{save_path}_roofline.png")
