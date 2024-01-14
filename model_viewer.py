@@ -15,6 +15,11 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("model_id", type=str, help="model id")
 parser.add_argument("config_path", type=str, help="config file")
+parser.add_argument(
+    "hardware",
+    type=str,
+    help="name of hardware, for example nvidia_v100 or nvidia_3090",
+)
 parser.add_argument("--batchsize", type=int, default=1, help="batch size")
 parser.add_argument("--seqlen", type=int, default=1024, help="sequence length")
 args = parser.parse_args()
@@ -29,36 +34,40 @@ num_attention_heads = config.get_num_attention_heads(model_config)
 hidden_size = config.get_hidden_size(model_config)
 num_key_value_heads = config.get_num_key_value_heads(model_config)
 num_hidden_layers = config.get_num_hidden_layers(model_config)
+num_mlp_act_size = 0
+
 
 model = AutoModelForCausalLM.from_config(model_config, trust_remote_code=True)
 
+
 layer_weight_numel = {}
 layer_mac_decode = {}
-layer_input_numel_decode = {}
-layer_output_numel_decode = {}
-workspace_decode = {}
+layer_load_act_numel_decode = {}
+layer_store_act_numel_decode = {}
 
 layer_mac_prefill = {}
-layer_input_numel_prefill = {}
-layer_output_numel_prefill = {}
-workspace_prefill = {}
+layer_load_act_numel_prefill = {}
+layer_store_act_numel_prefill = {}
 kv_cache_numel = {}
 for name, module in model.named_modules():
     if hasattr(module, "weight") and isinstance(module.weight, torch.Tensor):
         layer_weight_numel[name] = module.weight.numel()
     if isinstance(module, nn.Linear):
         layer_mac_decode[name] = module.weight.numel() * batchsize
-        layer_input_numel_decode[name] = module.in_features * batchsize
-        layer_output_numel_decode[name] = module.out_features * batchsize
+        layer_load_act_numel_decode[name] = module.in_features * batchsize
+        layer_store_act_numel_decode[name] = module.out_features * batchsize
         if config.lm_head_name in name:
             # the lm_head not need to
             layer_mac_prefill[name] = module.weight.numel() * batchsize
-            layer_input_numel_prefill[name] = module.in_features * batchsize
-            layer_output_numel_prefill[name] = module.out_features * batchsize
+            layer_load_act_numel_prefill[name] = module.in_features * batchsize
+            layer_store_act_numel_prefill[name] = module.out_features * batchsize
         else:
             layer_mac_prefill[name] = module.weight.numel() * batchsize * seqlen
-            layer_input_numel_prefill[name] = module.in_features * batchsize * seqlen
-            layer_output_numel_prefill[name] = module.out_features * batchsize * seqlen
+            layer_load_act_numel_prefill[name] = module.in_features * batchsize * seqlen
+            layer_store_act_numel_prefill[name] = (
+                module.out_features * batchsize * seqlen
+            )
+        num_mlp_act_size = max(num_mlp_act_size, module.in_features)
 
 # For attention
 for layeri in range(num_hidden_layers):
@@ -66,65 +75,98 @@ for layeri in range(num_hidden_layers):
     kv_cache_numel[f"layer{layeri}.kv_cache"] = (
         seqlen * head_size * num_key_value_heads * batchsize
     )
+    # LayerNorm
+    for name in ["atten.layernom", "mlp.layernorm"]:
+        layer_name = f"layer{layeri}.{name}"
+        layer_load_act_numel_decode[layer_name] = batchsize * hidden_size
+        layer_store_act_numel_decode[layer_name] = batchsize * hidden_size
+        layer_load_act_numel_prefill[layer_name] = batchsize * hidden_size * seqlen
+        layer_store_act_numel_prefill[layer_name] = batchsize * hidden_size * seqlen
+
     # QK matmul
     qk_name = f"layer{layeri}.qk"
     layer_mac_decode[qk_name] = 1 * seqlen * head_size * num_attention_heads * batchsize
-    layer_input_numel_decode[qk_name] = (
+    layer_load_act_numel_decode[qk_name] = (
         (seqlen + 1) * head_size * batchsize * num_attention_heads
     )
-    layer_output_numel_decode[qk_name] = 1 * seqlen * batchsize * num_attention_heads
+    layer_store_act_numel_decode[qk_name] = 1 * seqlen * batchsize * num_attention_heads
 
     layer_mac_prefill[qk_name] = (
         seqlen * seqlen * head_size * num_attention_heads * batchsize
     )
-    layer_input_numel_prefill[qk_name] = (
+    layer_load_act_numel_prefill[qk_name] = (
         seqlen * head_size * batchsize * num_attention_heads * 2
     )
-    layer_output_numel_prefill[qk_name] = (
+    layer_store_act_numel_prefill[qk_name] = (
         seqlen * seqlen * batchsize * num_attention_heads
     )
 
     # SV matmul
     sv_name = f"layer{layeri}.sv"
     layer_mac_decode[sv_name] = 1 * head_size * seqlen * num_attention_heads * batchsize
-    layer_input_numel_decode[sv_name] = (
+    layer_load_act_numel_decode[sv_name] = (
         seqlen * head_size * batchsize * num_attention_heads
         + 1 * seqlen * batchsize * num_attention_heads
     )
-    layer_output_numel_decode[sv_name] = 1 * head_size * batchsize * num_attention_heads
+    layer_store_act_numel_decode[sv_name] = (
+        1 * head_size * batchsize * num_attention_heads
+    )
 
     layer_mac_prefill[sv_name] = (
         seqlen * head_size * seqlen * num_attention_heads * batchsize
     )
-    layer_input_numel_prefill[sv_name] = (
+    layer_load_act_numel_prefill[sv_name] = (
         seqlen * head_size * batchsize * num_attention_heads
         + seqlen * seqlen * batchsize * num_attention_heads
     )
-    layer_output_numel_prefill[sv_name] = (
+    layer_store_act_numel_prefill[sv_name] = (
         seqlen * head_size * batchsize * num_attention_heads
     )
 
+    # Softmax
+    layer_name = f"layer{layeri}.atten.softmax"
+    layer_load_act_numel_decode[layer_name] = batchsize * head_size * seqlen * 1
+    layer_store_act_numel_decode[layer_name] = batchsize * head_size * seqlen * 1
+    layer_load_act_numel_prefill[layer_name] = batchsize * head_size * seqlen * seqlen
+    layer_store_act_numel_prefill[layer_name] = batchsize * head_size * seqlen * seqlen
+
+    # Residual Addition
+    for name in ["atten.add", "mlp.add"]:
+        layer_name = f"layer{layeri}.{name}"
+        layer_load_act_numel_decode[layer_name] = batchsize * hidden_size * 2
+        layer_store_act_numel_decode[layer_name] = batchsize * hidden_size
+        layer_load_act_numel_prefill[layer_name] = batchsize * hidden_size * seqlen * 2
+        layer_store_act_numel_prefill[layer_name] = batchsize * hidden_size * seqlen
+
+    # MLP activation
+    layer_name = f"layer{layeri}.mlp.act"
+    layer_load_act_numel_decode[layer_name] = batchsize * num_mlp_act_size
+    layer_store_act_numel_decode[layer_name] = batchsize * num_mlp_act_size
+    layer_load_act_numel_prefill[layer_name] = batchsize * num_mlp_act_size * seqlen
+    layer_store_act_numel_prefill[layer_name] = batchsize * num_mlp_act_size * seqlen
+
+
 # for workspace
 
-# calculate total 
+# calculate total
 total_mac_decode = np.sum(list(layer_mac_decode.values()))
 total_mac_prefill = np.sum(list(layer_mac_prefill.values()))
 total_weight = np.sum(list(layer_weight_numel.values()))
 total_kv_cache = np.sum(list(kv_cache_numel.values()))
-total_input_numel_decode = np.sum(list(layer_input_numel_decode.values()))
-total_output_numel_decode = np.sum(list(layer_output_numel_decode.values()))
-total_input_numel_prefill = np.sum(list(layer_input_numel_prefill.values()))
-total_output_numel_prefill = np.sum(list(layer_output_numel_prefill.values()))
+total_load_act_numel_decode = np.sum(list(layer_load_act_numel_decode.values()))
+total_store_act_numel_decode = np.sum(list(layer_store_act_numel_decode.values()))
+total_load_numel_prefill = np.sum(list(layer_load_act_numel_prefill.values()))
+total_store_numel_prefill = np.sum(list(layer_store_act_numel_prefill.values()))
 
 
 print(f"decode total MAC(multiply-accumulation): {total_mac_decode}")
 print(f"prefill total MAC(multiply-accumulation): {total_mac_prefill}")
 print(f"total weight: {total_weight}")
 print(f"total kv_cache: {total_kv_cache}")
-print(f"decode total input numel: {total_input_numel_decode}")
-print(f"decode total output numel: {total_output_numel_decode}")
-print(f"prefill total input numel: {total_input_numel_prefill}")
-print(f"prefill total output numel: {total_output_numel_prefill}")
+print(f"decode total load numel: {total_load_act_numel_decode}")
+print(f"decode total store numel: {total_store_act_numel_decode}")
+print(f"prefill total load numel: {total_load_numel_prefill}")
+print(f"prefill total store numel: {total_store_numel_prefill}")
 
 # export to mac csv and weight csv, not use pandas
 save_path = f"output/{model_id[:model_id.rfind('/')]}"
@@ -165,3 +207,58 @@ for k, v in kv_cache_numel.items():
     kv_cache_file.write(f"{k},{v}\n")
 kv_cache_file.write(f"total,{total_kv_cache}")
 kv_cache_file.close()
+
+# Roofline model
+w_bit = 16
+a_bit = 16
+
+memory_access_decode = (
+    (total_load_act_numel_decode + total_store_act_numel_decode) * a_bit
+    + total_weight * w_bit
+) / 8
+
+memory_access_prefill = (
+    (total_load_numel_prefill + total_store_numel_prefill) * a_bit
+    + total_weight * w_bit
+) / 8
+
+import matplotlib.pyplot as plt
+
+# bandwidth, FP16 MAC
+hardware_params = {"nvidia_v100": (900e9, 112e12 / 2)}
+
+
+def draw_roofline(bandwidth, max_mac_per_s):
+    # bandwidth is bytes/s
+    # x axis is mac/byte
+    # y axis is mac/s
+    y_max = max_mac_per_s
+    first_x_to_y_max = y_max / bandwidth
+
+    plt.plot(
+        [0, first_x_to_y_max, first_x_to_y_max * 3], [0, y_max, y_max], color="black"
+    )
+    plt.xlabel("Operation Intensity (MAC/Byte)")
+    plt.ylabel("Performance (MAC/s)")
+
+
+bandwidth, max_mac_per_s = hardware_params[args.hardware]
+draw_roofline(bandwidth, max_mac_per_s)
+
+
+def draw_roofline_model(max_mac_per_s, mac, memory_access, name, color):
+    intensity = mac / memory_access
+    plt.vlines(intensity, 0, max_mac_per_s, colors=color, linestyles="dashed")
+
+    # rotate annotation
+    plt.annotate(name, xy=(intensity, max_mac_per_s / 2), color=color, rotation=90)
+
+
+draw_roofline_model(
+    max_mac_per_s, total_mac_decode, memory_access_decode, "decode", "red"
+)
+draw_roofline_model(
+    max_mac_per_s, total_mac_prefill, memory_access_prefill, "prefill", "green"
+)
+
+plt.savefig(f"{save_path}_roofline.png")
