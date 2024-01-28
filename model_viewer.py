@@ -236,9 +236,9 @@ memory_access_prefill = (
 ) / 8
 
 import matplotlib.pyplot as plt
-
+from hardwares.hardware_params import hardware_params
 # bandwidth, FP16 MAC
-hardware_params = {"nvidia_v100": (900e9, 112e12 / 2)}
+
 
 
 def draw_roofline(bandwidth, max_mac_per_s):
@@ -255,7 +255,8 @@ def draw_roofline(bandwidth, max_mac_per_s):
     plt.ylabel("Performance (MAC/s)")
 
 
-bandwidth, max_mac_per_s = hardware_params[args.hardware]
+bandwidth = hardware_params[args.hardware]["bandwith"]
+max_mac_per_s = hardware_params[args.hardware]["FP16"]/2
 draw_roofline(bandwidth, max_mac_per_s)
 
 
@@ -266,10 +267,10 @@ def draw_roofline_model(max_mac_per_s, mac, memory_access, name, color):
     # rotate annotation
     plt.annotate(
         name,
-        xy=(intensity, max_mac_per_s / 2),
+        xy=(intensity, max_mac_per_s / np.random.randint(2,5)),
         color=color,
         rotation=90,
-        ha="center",
+        # ha="center",
         va="center",
     )
 
@@ -278,14 +279,16 @@ draw_roofline_model(
     max_mac_per_s,
     total_mac_decode,
     memory_access_decode,
-    f"decode \n(len={args.seqlen}, bs={args.batchsize})",
+    # f"decode \n(len={args.seqlen}, bs={args.batchsize})",
+    f"decode",
     "red",
 )
 draw_roofline_model(
     max_mac_per_s,
     total_mac_prefill,
     memory_access_prefill,
-    f"prefill \n(len={args.seqlen}, bs={args.batchsize})",
+    # f"prefill \n(len={args.seqlen}, bs={args.batchsize})",
+    f"prefill",
     "green",
 )
 
@@ -303,5 +306,32 @@ draw_roofline_model(
     f"prefill linear",
     "black",
 )
+qk_mac = 0
+qk_memory_access=0
+for layeri in range(num_hidden_layers):
+    qk_mac += layer_mac_decode[f"layer{layeri}.qk"]
+    qk_memory_access += (layer_load_act_numel_decode[f"layer{layeri}.qk"] + layer_store_act_numel_decode[f"layer{layeri}.qk"]) * a_bit
+draw_roofline_model(
+    max_mac_per_s,
+    qk_mac,
+    qk_memory_access,
+    f"qk",
+    "green",
+)
+kv_mac=0
+kv_memory_access=0
+for layeri in range(num_hidden_layers):
+    kv_mac += layer_mac_decode[f"layer{layeri}.sv"]
+    kv_memory_access += (layer_load_act_numel_decode[f"layer{layeri}.sv"] + layer_store_act_numel_decode[f"layer{layeri}.sv"]) * a_bit
+
+draw_roofline_model(
+    max_mac_per_s,
+    kv_mac,
+    kv_memory_access,
+    f"kv",
+    "green",
+)
+
+plt.plot()
 
 plt.savefig(f"{save_path}_roofline.png")
