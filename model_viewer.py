@@ -18,7 +18,7 @@ parser.add_argument("config_path", type=str, help="config file")
 parser.add_argument(
     "hardware",
     type=str,
-    help="name of hardware, for example nvidia_v100 or nvidia_3090",
+    help="name of hardware, for example nvidia_V100 or nvidia_A6000",
 )
 parser.add_argument("--batchsize", type=int, default=1, help="batch size")
 parser.add_argument("--seqlen", type=int, default=1024, help="sequence length")
@@ -235,103 +235,253 @@ memory_access_prefill = (
     + total_weight * w_bit
 ) / 8
 
-import matplotlib.pyplot as plt
 from hardwares.hardware_params import hardware_params
-# bandwidth, FP16 MAC
 
-
-
-def draw_roofline(bandwidth, max_mac_per_s):
+def roofline_analyze(bandwidth, max_OPS, OPs, memory_access):
     # bandwidth is bytes/s
-    # x axis is mac/byte
-    # y axis is mac/s
-    y_max = max_mac_per_s
-    first_x_to_y_max = y_max / bandwidth
+    # memory_access in bit
+    # x axis is OPS/byte
+    # y axis is OPS/s
+    y_max = max_OPS
+    memory_access_bytes=memory_access/8
+    turning_point = y_max / bandwidth
+    arithmetic_intensity=OPs/memory_access_bytes
+    if arithmetic_intensity < turning_point:
+        bound="memory"
+        performance=arithmetic_intensity*bandwidth
+    else:
+        bound="compute"
+        performance=y_max
+    return arithmetic_intensity,performance,bound
 
-    plt.plot(
-        [0, first_x_to_y_max, first_x_to_y_max * 3], [0, y_max, y_max], color="black"
-    )
-    plt.xlabel("Operation Intensity (MAC/Byte)")
-    plt.ylabel("Performance (MAC/s)")
-
+def str_number(num):
+    if num > 1e12:
+        return f"{num/1e12:.0f}T"
+    elif num > 1e9:
+        return f"{num/1e9:.0f}G"
+    elif num > 1e6:
+        return f"{num/1e6:.0f}M"
+    elif num > 1e3:
+        return f"{num/1e3:.0f}K"
+    elif num<10:
+        return f"{num:.2f}"
+    else:
+        return f"{num:.0f}"
 
 bandwidth = hardware_params[args.hardware]["bandwith"]
-max_mac_per_s = hardware_params[args.hardware]["FP16"]/2
-draw_roofline(bandwidth, max_mac_per_s)
+max_OPS = hardware_params[args.hardware]["FP16"]
+decode_file_name=f"{save_path}_decode_roofline.csv"
+prefill_file_name=f"{save_path}_prefill_roofline.csv"
+for layer in config.get_transformer_layers(model)[:1]:
+    for name, module in layer.named_modules():
+        # for linear layers
+        if isinstance(module, nn.Linear):
+            # for decode
+            OPs = module.weight.numel() * batchsize *2
+            load_act = module.in_features * batchsize
+            store_act = module.out_features * batchsize
+            memory_access = (load_act + store_act) * a_bit + module.weight.numel() * w_bit
+            arithmetic_intensity,performance,bound=roofline_analyze(bandwidth, max_OPS, OPs, memory_access)
+            with open(decode_file_name, "a+") as f:
+                f.write(f"{name},{str_number(OPs)},{str_number(memory_access/8)},{str_number(arithmetic_intensity)},{str_number(performance)},{bound}\n")
+            # for prefill
+            OPs=module.weight.numel() * batchsize * seqlen * 2
+            load_act = module.in_features * batchsize * seqlen
+            store_act = module.out_features * batchsize * seqlen
+            memory_access = (load_act + store_act) * a_bit + module.weight.numel() * w_bit
+            arithmetic_intensity,performance,bound=roofline_analyze(bandwidth, max_OPS, OPs, memory_access)
+            with open(prefill_file_name, "a+") as f:
+                f.write(f"{name},{str_number(OPs)},{str_number(memory_access/8)},{str_number(arithmetic_intensity)},{str_number(performance)},{bound}\n")
+    # for attention
+    head_size = hidden_size // num_attention_heads
+    # for decode
+    name=f"qk_matmul"
+    OPs = 1 * seqlen * head_size * num_attention_heads * batchsize *2
+    load_act = (seqlen + 1) * head_size * batchsize * num_attention_heads
+    store_act = 1 * seqlen * batchsize * num_attention_heads
+    memory_access = (load_act + store_act) * a_bit
+    arithmetic_intensity,performance,bound=roofline_analyze(bandwidth, max_OPS, OPs, memory_access)
+    with open(decode_file_name, "a+") as f:
+        f.write(f"{name},{str_number(OPs)},{str_number(memory_access/8)},{str_number(arithmetic_intensity)},{str_number(performance)},{bound}\n")
+    name=f"sv_matmul"
+    OPs = 1 * head_size * seqlen * num_attention_heads * batchsize *2
+    load_act = seqlen * head_size * batchsize * num_attention_heads + 1 * seqlen * batchsize * num_attention_heads
+    store_act = 1 * head_size * batchsize * num_attention_heads
+    memory_access = (load_act + store_act) * a_bit
+    arithmetic_intensity,performance,bound=roofline_analyze(bandwidth, max_OPS, OPs, memory_access)
+    with open(decode_file_name, "a+") as f:
+        f.write(f"{name},{str_number(OPs)},{str_number(memory_access/8)},{str_number(arithmetic_intensity)},{str_number(performance)},{bound}\n")
+    name=f"softmax"
+    # max sub exp sum div
+    OPs = batchsize * num_attention_heads * seqlen * 1 *5
+    load_act = batchsize * num_attention_heads * seqlen * 1
+    store_act = batchsize * num_attention_heads * seqlen * 1
+    memory_access = (load_act + store_act) * a_bit
+    arithmetic_intensity,performance,bound=roofline_analyze(bandwidth, max_OPS, OPs, memory_access)
+    with open(decode_file_name, "a+") as f:
+        f.write(f"{name},{str_number(OPs)},{str_number(memory_access/8)},{str_number(arithmetic_intensity)},{str_number(performance)},{bound}\n")
+
+    name=f"norm"
+    # sum sub pow sum div mul add
+    OPs = batchsize * hidden_size * 1 * 7
+    load_act = batchsize * hidden_size * 1
+    store_act = batchsize * hidden_size * 1
+    memory_access = (load_act + store_act) * a_bit
+    arithmetic_intensity,performance,bound=roofline_analyze(bandwidth, max_OPS, OPs, memory_access)
+    with open(decode_file_name, "a+") as f:
+        f.write(f"{name},{str_number(OPs)},{str_number(memory_access/8)},{str_number(arithmetic_intensity)},{str_number(performance)},{bound}\n")
+    
+    name=f"add"
+    # sum sub pow sum div mul add
+    OPs = batchsize * hidden_size * 1 
+    load_act = batchsize * hidden_size * 1
+    store_act = batchsize * hidden_size * 1
+    memory_access = (load_act + store_act) * a_bit
+    arithmetic_intensity,performance,bound=roofline_analyze(bandwidth, max_OPS, OPs, memory_access)
+    with open(decode_file_name, "a+") as f:
+        f.write(f"{name},{str_number(OPs)},{str_number(memory_access/8)},{str_number(arithmetic_intensity)},{str_number(performance)},{bound}\n")
+    
+    # for prefill
+    name=f"qk_matmul"
+    OPs = seqlen * seqlen * head_size * num_attention_heads * batchsize *2
+    load_act = seqlen * head_size * batchsize * num_attention_heads * 2
+    store_act = seqlen * seqlen * batchsize * num_attention_heads
+    memory_access = (load_act + store_act) * a_bit
+    arithmetic_intensity,performance,bound=roofline_analyze(bandwidth, max_OPS, OPs, memory_access)
+    with open(prefill_file_name, "a+") as f:
+        f.write(f"{name},{str_number(OPs)},{str_number(memory_access/8)},{str_number(arithmetic_intensity)},{str_number(performance)},{bound}\n")
+    name=f"sv_matmul"
+    OPs = seqlen * head_size * seqlen * num_attention_heads * batchsize *2
+    load_act = seqlen * head_size * batchsize * num_attention_heads + seqlen * seqlen * batchsize * num_attention_heads
+    store_act = seqlen * head_size * batchsize * num_attention_heads
+    memory_access = (load_act + store_act) * a_bit
+    arithmetic_intensity,performance,bound=roofline_analyze(bandwidth, max_OPS, OPs, memory_access)
+    with open(prefill_file_name, "a+") as f:
+        f.write(f"{name},{str_number(OPs)},{str_number(memory_access/8)},{str_number(arithmetic_intensity)},{str_number(performance)},{bound}\n")
+    name=f"softmax"
+    OPs = batchsize * num_attention_heads * seqlen * seqlen *5
+    load_act = batchsize * num_attention_heads * seqlen * seqlen
+    store_act = batchsize * num_attention_heads * seqlen * seqlen
+    memory_access = (load_act + store_act) * a_bit
+    arithmetic_intensity,performance,bound=roofline_analyze(bandwidth, max_OPS, OPs, memory_access)
+    with open(prefill_file_name, "a+") as f:
+        f.write(f"{name},{str_number(OPs)},{str_number(memory_access/8)},{str_number(arithmetic_intensity)},{str_number(performance)},{bound}\n")
+    name=f"norm"
+    # sum sub pow sum div mul add
+    OPs = batchsize * hidden_size * seqlen * 7
+    load_act = batchsize * hidden_size * seqlen
+    store_act = batchsize * hidden_size * seqlen
+    memory_access = (load_act + store_act) * a_bit
+    arithmetic_intensity,performance,bound=roofline_analyze(bandwidth, max_OPS, OPs, memory_access)
+    with open(prefill_file_name, "a+") as f:
+        f.write(f"{name},{str_number(OPs)},{str_number(memory_access/8)},{str_number(arithmetic_intensity)},{str_number(performance)},{bound}\n")
+    
+    name=f"add"
+    OPs = batchsize * hidden_size * seqlen * 1
+    load_act = batchsize * hidden_size * seqlen
+    store_act = batchsize * hidden_size * seqlen
+    memory_access = (load_act + store_act) * a_bit
+    arithmetic_intensity,performance,bound=roofline_analyze(bandwidth, max_OPS, OPs, memory_access)
+    with open(prefill_file_name, "a+") as f:
+        f.write(f"{name},{str_number(OPs)},{str_number(memory_access/8)},{str_number(arithmetic_intensity)},{str_number(performance)},{bound}\n")
+    
+    
+    
+
+# import matplotlib.pyplot as plt
+# # bandwidth, FP16 MAC
+
+# def draw_roofline(bandwidth, max_mac_per_s):
+#     # bandwidth is bytes/s
+#     # x axis is mac/byte
+#     # y axis is mac/s
+#     y_max = max_mac_per_s
+#     first_x_to_y_max = y_max / bandwidth
+
+#     plt.plot(
+#         [0, first_x_to_y_max, first_x_to_y_max * 3], [0, y_max, y_max], color="black"
+#     )
+#     plt.xlabel("Operation Intensity (MAC/Byte)")
+#     plt.ylabel("Performance (MAC/s)")
 
 
-def draw_roofline_model(max_mac_per_s, mac, memory_access, name, color):
-    intensity = mac / memory_access
-    plt.vlines(intensity, 0, max_mac_per_s, colors=color, linestyles="dashed")
-
-    # rotate annotation
-    plt.annotate(
-        name,
-        xy=(intensity, max_mac_per_s / np.random.randint(2,5)),
-        color=color,
-        rotation=90,
-        # ha="center",
-        va="center",
-    )
+# bandwidth = hardware_params[args.hardware]["bandwith"]
+# max_mac_per_s = hardware_params[args.hardware]["FP16"]/2
+# draw_roofline(bandwidth, max_mac_per_s)
 
 
-draw_roofline_model(
-    max_mac_per_s,
-    total_mac_decode,
-    memory_access_decode,
-    # f"decode \n(len={args.seqlen}, bs={args.batchsize})",
-    f"decode",
-    "red",
-)
-draw_roofline_model(
-    max_mac_per_s,
-    total_mac_prefill,
-    memory_access_prefill,
-    # f"prefill \n(len={args.seqlen}, bs={args.batchsize})",
-    f"prefill",
-    "green",
-)
+# def draw_roofline_model(max_mac_per_s, mac, memory_access, name, color):
+#     intensity = mac / memory_access
+#     plt.vlines(intensity, 0, max_mac_per_s, colors=color, linestyles="dashed")
 
-draw_roofline_model(
-    max_mac_per_s,
-    linear_mac_decode,
-    linear_mem_access_decode,
-    f"decode linear",
-    "black",
-)
-draw_roofline_model(
-    max_mac_per_s,
-    linear_mac_prefill,
-    linear_mem_access_prefill,
-    f"prefill linear",
-    "black",
-)
-qk_mac = 0
-qk_memory_access=0
-for layeri in range(num_hidden_layers):
-    qk_mac += layer_mac_decode[f"layer{layeri}.qk"]
-    qk_memory_access += (layer_load_act_numel_decode[f"layer{layeri}.qk"] + layer_store_act_numel_decode[f"layer{layeri}.qk"]) * a_bit
-draw_roofline_model(
-    max_mac_per_s,
-    qk_mac,
-    qk_memory_access,
-    f"qk",
-    "green",
-)
-kv_mac=0
-kv_memory_access=0
-for layeri in range(num_hidden_layers):
-    kv_mac += layer_mac_decode[f"layer{layeri}.sv"]
-    kv_memory_access += (layer_load_act_numel_decode[f"layer{layeri}.sv"] + layer_store_act_numel_decode[f"layer{layeri}.sv"]) * a_bit
+#     # rotate annotation
+#     plt.annotate(
+#         name,
+#         xy=(intensity, max_mac_per_s / np.random.randint(2,5)),
+#         color=color,
+#         rotation=90,
+#         # ha="center",
+#         va="center",
+#     )
 
-draw_roofline_model(
-    max_mac_per_s,
-    kv_mac,
-    kv_memory_access,
-    f"kv",
-    "green",
-)
 
-plt.plot()
+# draw_roofline_model(
+#     max_mac_per_s,
+#     total_mac_decode,
+#     memory_access_decode,
+#     # f"decode \n(len={args.seqlen}, bs={args.batchsize})",
+#     f"decode",
+#     "red",
+# )
+# draw_roofline_model(
+#     max_mac_per_s,
+#     total_mac_prefill,
+#     memory_access_prefill,
+#     # f"prefill \n(len={args.seqlen}, bs={args.batchsize})",
+#     f"prefill",
+#     "green",
+# )
 
-plt.savefig(f"{save_path}_roofline.png")
+# draw_roofline_model(
+#     max_mac_per_s,
+#     linear_mac_decode,
+#     linear_mem_access_decode,
+#     f"decode linear",
+#     "black",
+# )
+# draw_roofline_model(
+#     max_mac_per_s,
+#     linear_mac_prefill,
+#     linear_mem_access_prefill,
+#     f"prefill linear",
+#     "black",
+# )
+# qk_mac = 0
+# qk_memory_access=0
+# for layeri in range(num_hidden_layers):
+#     qk_mac += layer_mac_decode[f"layer{layeri}.qk"]
+#     qk_memory_access += (layer_load_act_numel_decode[f"layer{layeri}.qk"] + layer_store_act_numel_decode[f"layer{layeri}.qk"]) * a_bit
+# draw_roofline_model(
+#     max_mac_per_s,
+#     qk_mac,
+#     qk_memory_access,
+#     f"qk",
+#     "green",
+# )
+# kv_mac=0
+# kv_memory_access=0
+# for layeri in range(num_hidden_layers):
+#     kv_mac += layer_mac_decode[f"layer{layeri}.sv"]
+#     kv_memory_access += (layer_load_act_numel_decode[f"layer{layeri}.sv"] + layer_store_act_numel_decode[f"layer{layeri}.sv"]) * a_bit
+
+# draw_roofline_model(
+#     max_mac_per_s,
+#     kv_mac,
+#     kv_memory_access,
+#     f"kv",
+#     "green",
+# )
+
+# plt.plot()
+
+# plt.savefig(f"{save_path}_roofline.png")
