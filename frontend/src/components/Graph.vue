@@ -56,24 +56,34 @@ window.onresize = () => {
 };
 
 function graphUpdate(is_fit_view = false) {
-    if (step.value == 'settings') {
-        return
-    }
+    const ip_port = "127.0.0.1:5000"
     console.log("graphUpdate", settingsData)
-    graph_data = data
-    graph.changeData(graph_data)
-    console.log(graph_data)
-    // graph.render();
-    // graph.refresh()
-    selectedNodeInfo.value = {}
-    selectedNodeId.value = ""
-    nowFocusNode = null
-    if (is_fit_view) {
-        graph.render();
-        setTimeout(() => {
-            graph.fitView();
-        }, 10);
-    }
+    const url = 'http://' + ip_port + '/'
+    axios.get(url).then(function (response) {
+        // 这是异步的
+        console.log(response);
+        // 将返回回来的json数据转换成graph_data
+        graph_data = response.data
+        graph.changeData(graph_data)
+        console.log(graph_data)
+        // graph.render();
+        // graph.refresh()
+        selectedNodeInfo.value = {}
+        selectedNodeId.value = ""
+        nowFocusNode = null
+        if (is_fit_view) {
+            graph.render();
+            setTimeout(() => {
+                graph.fitView();
+            }, 10);
+        }
+
+    })
+        .catch(function (error) {
+            console.log(error);
+            alert("失败", url)
+        });
+
 }
 
 graphUpdate(true);
