@@ -3,17 +3,14 @@
         <div id="graphContainer" @resize="handleResize"></div>
 
         <div class="float-search-window">
-            <!-- 浮窗内容 -->
             <input type="text" v-model.lazy="searchText" placeholder="Search" />
             <div>
-                <!-- 搜索结果 -->
                 <div v-for="(value) in searchResult" @click="SelectNode(value, true)">
                     {{ value }}
                 </div>
             </div>
         </div>
         <div class="float-node-info-window">
-            <!-- 浮窗内容 -->
             <div v-for="(value, key) in selectedNodeInfo" :key="key">
                 {{ key }}: <br />{{ value }}<br /><br />
             </div>
@@ -27,8 +24,6 @@ import { onMounted, onBeforeUpdate, provide } from 'vue'
 import { watch, inject, ref } from 'vue'
 import { graph_config } from "./graphs/graph_config.js"
 import axios from 'axios'
-import {data} from "./graphs/default_data.js"
-
 
 var graph = null;
 var graph_data;
@@ -60,13 +55,11 @@ function graphUpdate(is_fit_view = false) {
     console.log("graphUpdate", settingsData)
     const url = 'http://' + ip_port + '/'
     axios.get(url).then(function (response) {
-        // 这是异步的
         console.log(response);
-        // 将返回回来的json数据转换成graph_data
         graph_data = response.data
         graph.changeData(graph_data)
         console.log(graph_data)
-        // graph.render();
+        graph.render();
         // graph.refresh()
         selectedNodeInfo.value = {}
         selectedNodeId.value = ""
@@ -80,8 +73,8 @@ function graphUpdate(is_fit_view = false) {
 
     })
         .catch(function (error) {
+            console.log("errorin graphUpdate");
             console.log(error);
-            alert("失败", url)
         });
 
 }
@@ -92,7 +85,7 @@ watch(() => step.value, () => {
     graphUpdate(true);
 
 })
-watch(() => graphUpdateTrigger.value, () => graphUpdate(false))
+watch(() => graphUpdateTrigger.value, () => graphUpdate(true))
 
 function handleSearch(newText, oldText) {
     console.log("handleSearch", newText)
@@ -173,12 +166,6 @@ onMounted(() => {
         const node = item.getModel();
         clickNode(node);
     });
-    graph.on('nodeselectchange', (e) => {
-        for (let index = 0; index < e.selectedItems.nodes.length; index++) {
-            selectedNodeListRef.value.push(e.selectedItems.nodes[index]._cfg.id);
-        }
-        console.log(selectedNodeListRef.value)
-    });
     graph.render();
 })
 
@@ -187,11 +174,6 @@ function clickNode(node) {
     const nodeId = node.id;
     SelectNode(nodeId)
 }
-
-function addSelNode(node) {
-    console.log(node.id, "has been selected!")
-}
-
 </script>
 
 <style scoped>
