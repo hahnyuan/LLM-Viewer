@@ -5,6 +5,8 @@ from roofline_model import roofline_analyze
 from transformers import AutoTokenizer, AutoConfig, AutoModelForCausalLM
 from utils import str_number,str_number_time
 
+ALL_DATA_NAMES=["OPs","memory_access","load_weight","load_act","store_act","load_kv_cache","store_kv_cache","time_cost"]
+
 class ModelAnalyzer:
     def __init__(self, model_id, hardware, config_file=None):
         self.model_id = model_id
@@ -87,7 +89,7 @@ class ModelAnalyzer:
             with open(file_name, "a+") as f:
 
                 f.write(
-                    f"\n\n=== {self.model_id} {self.hardware} w_bit={self.w_bit} a_bit={self.a_bit} batchsize={self.batchsize} seqlen={self.seqlen}===\n"
+                    f"\n\n=== {self.model_id} {self.hardware} w_bit={self.w_bit} a_bit={self.a_bit} kv_bit={self.kv_bit} batchsize={self.batchsize} seqlen={self.seqlen}===\n"
                 )
                 # legend
                 f.write(
@@ -117,6 +119,7 @@ class ModelAnalyzer:
         hidden_size = config.get_hidden_size(model_params)
         num_key_value_heads = config.get_num_key_value_heads(model_params)
         num_hidden_layers = config.get_num_hidden_layers(model_params)
+        vocab_size= config.get_vocab_size(model_params)
 
         for name, (ic, oc, _) in config.get_linear_layers(model_params).items():
             # for linear layers
@@ -190,30 +193,30 @@ class ModelAnalyzer:
             store_kv_cache=0,
         )
 
-        name = f"norm"
-        # sum sub pow sum div mul add
-        self._analyze_to_results(
-            "decode",
-            name,
-            OPs=batchsize * hidden_size * 1 * 7,
-            load_weight=0,
-            load_act=batchsize * hidden_size * 1 * a_byte,
-            store_act=batchsize * hidden_size * 1 * a_byte,
-            load_kv_cache=0,
-            store_kv_cache=0,
-        )
+        for name in ["self_attn_norm","mlp_norm"]:
+            # sum sub pow sum div mul add
+            self._analyze_to_results(
+                "decode",
+                name,
+                OPs=batchsize * hidden_size * 1 * 7,
+                load_weight=0,
+                load_act=batchsize * hidden_size * 1 * a_byte,
+                store_act=batchsize * hidden_size * 1 * a_byte,
+                load_kv_cache=0,
+                store_kv_cache=0,
+            )
 
-        name = f"add"
-        self._analyze_to_results(
-            "decode",
-            name,
-            OPs=batchsize * hidden_size * 1,
-            load_weight=0,
-            load_act=batchsize * hidden_size * 1 * a_byte,
-            store_act=batchsize * hidden_size * 1 * a_byte,
-            load_kv_cache=0,
-            store_kv_cache=0,
-        )
+        for name in ["self_attn_add","mlp_add"]:
+            self._analyze_to_results(
+                "decode",
+                name,
+                OPs=batchsize * hidden_size * 1,
+                load_weight=0,
+                load_act=batchsize * hidden_size * 1 * a_byte,
+                store_act=batchsize * hidden_size * 1 * a_byte,
+                load_kv_cache=0,
+                store_kv_cache=0,
+            )
 
         # for prefill
         name = f"qk_matmul"
@@ -258,26 +261,54 @@ class ModelAnalyzer:
             load_kv_cache=0,
             store_kv_cache=0,
         )
-        name = f"norm"
-        self._analyze_to_results(
-            "prefill",
-            name,
-            OPs=batchsize * hidden_size * seqlen * 7,
-            load_weight=0,
-            load_act=batchsize * hidden_size * seqlen * a_byte,
-            store_act=batchsize * hidden_size * seqlen * a_byte,
-            load_kv_cache=0,
-            store_kv_cache=0,
-        )
-        name = f"add"
-        self._analyze_to_results(
-            "prefill",
-            name,
-            OPs=batchsize * hidden_size * seqlen * 1,
-            load_weight=0,
-            load_act=batchsize * hidden_size * seqlen * a_byte,
-            store_act=batchsize * hidden_size * seqlen * a_byte,
-            load_kv_cache=0,
-            store_kv_cache=0,
-        )
+        for name in ["self_attn_norm","mlp_norm"]:
+            self._analyze_to_results(
+                "prefill",
+                name,
+                OPs=batchsize * hidden_size * seqlen * 7,
+                load_weight=0,
+                load_act=batchsize * hidden_size * seqlen * a_byte,
+                store_act=batchsize * hidden_size * seqlen * a_byte,
+                load_kv_cache=0,
+                store_kv_cache=0,
+            )
+        for name in ["self_attn_add","mlp_add"]:
+            self._analyze_to_results(
+                "prefill",
+                name,
+                OPs=batchsize * hidden_size * seqlen * 1,
+                load_weight=0,
+                load_act=batchsize * hidden_size * seqlen * a_byte,
+                store_act=batchsize * hidden_size * seqlen * a_byte,
+                load_kv_cache=0,
+                store_kv_cache=0,
+            )
+
+        # compute total
+        total_results = {"decode":{},"prefill":{}}
+        for data_name in ALL_DATA_NAMES:
+            total_results["decode"][data_name] = 0
+            total_results["prefill"][data_name] = 0
+        for stage in ["decode","prefill"]:
+            for layer_name, result in self.results[stage].items():
+                for data_name in ALL_DATA_NAMES:
+                    total_results[stage][data_name] += result[data_name]*num_hidden_layers
+
+        # lm_head
+        name="lm_head"
+        for stage in ["prefill","decode"]:
+            self._analyze_to_results(
+                stage,
+                name,
+                OPs=batchsize * hidden_size * vocab_size * 1,
+                load_weight=hidden_size * vocab_size,
+                load_act=hidden_size * a_byte,
+                store_act=vocab_size * a_byte,
+                load_kv_cache=0,
+                store_kv_cache=0,
+            )
+            for data_name in ALL_DATA_NAMES:
+                total_results[stage][data_name] += self.results[stage][name][data_name]
+        self.results["total_results"]=total_results
+
         return self.results

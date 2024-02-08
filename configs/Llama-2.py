@@ -20,10 +20,6 @@ def get_intermediate_size(config):
 def get_vocab_size(config):
     return getattr(config, "vocab_size")
 
-def get_lm_haed_layer(config):
-    return {
-        'lm_haead':[get_hidden_size(config),get_vocab_size(config)]
-    }
 
 def get_linear_layers(config):
     hidden_size=get_hidden_size(config)
