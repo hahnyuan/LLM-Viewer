@@ -1,7 +1,7 @@
 <template>
     <div class="left_control">
         <Settings v-if="step == 'settings'" class="contrl_content"></Settings>
-        <Parse v-if="step == 'parse_model'" class="contrl_content"></Parse>
+        <Parse v-if="step == 'LLaMA'" class="contrl_content"></Parse>
     </div>
 </template>
 

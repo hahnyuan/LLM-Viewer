@@ -1,17 +1,15 @@
 <template>
     <!-- 这里放7个按钮 -->
     <!-- 加粗 -->
-    <div class="title">LLMViewer </div>
+    <div class="title">LLMViewer v0.1</div>
     <div class="header_button">
-        <button @click="change_step('settings')" :class="{ active: step == 'settings' }">Settings</button>
+        <!-- <button @click="change_step('settings')" :class="{ active: step == 'settings' }">Settings</button> -->
         | Model:
-        <button @click="change_step('parse_model')" :class="{ active: step == 'parse_model' }">LLaMA</button>
-        <!-- <button @click="change_step('exec_opt')">执行图优化</button> -->
-        <button @click="change_step('quant_config')" :class="{ active: step == 'quant_config' }">ChatGLM</button>
-        <!-- <button @click="change_step('quant_dataset')" :class="{ active: step == 'quant_dataset' }">数据准备</button>
-        <button @click="change_step('exec_quant')" :class="{ active: step == 'exec_quant' }">执行量化</button>
-        <button @click="change_step('analyze')" :class="{ active: step == 'analyze' }">结果分析</button>
-        <button @click="exit_quant()">结束退出</button> -->
+        <select v-model="selectedOption" @change="handleSelection">
+            <option value="LLaMA">LLaMA</option>
+            <option value="ChatGLM">ChatGLM</option>
+        </select>
+
         | Stage:
         <button @click="change_step('onnx_modifier')" :class="{ active: step == 'onnx_modifier' }">Prefill</button>
         <button @click="change_step('hm_onnx_viewer')" :class="{ active: step == 'hm_onnx_viewer' }">Decode</button>
@@ -23,13 +21,16 @@ import { inject, ref, watch, computed } from 'vue';
 const step = inject('step');
 const settingsData = inject('settingsData');
 
-function change_step(new_step) {
-    if (new_step == "analyze") {
-        alert("功能优化中，暂未开放")
-        return
-    }
-    console.log("change_step", new_step)
-    step.value = new_step
+// function change_step(new_step) {
+//     console.log("change_step", new_step)
+//     step.value = new_step
+// }
+var selectedOption = ref('LLaMA');
+
+function handleSelection() {
+    console.log("handleSelection", selectedOption.value)
+    step.value = selectedOption.value
+
 }
 
 

@@ -3,9 +3,19 @@ import importlib
 from hardwares.hardware_params import hardware_params
 from roofline_model import roofline_analyze
 from transformers import AutoTokenizer, AutoConfig, AutoModelForCausalLM
-from utils import str_number,str_number_time
+from utils import str_number, str_number_time
 
-ALL_DATA_NAMES=["OPs","memory_access","load_weight","load_act","store_act","load_kv_cache","store_kv_cache","time_cost"]
+ALL_DATA_NAMES = [
+    "OPs",
+    "memory_access",
+    "load_weight",
+    "load_act",
+    "store_act",
+    "load_kv_cache",
+    "store_kv_cache",
+    "time_cost",
+]
+
 
 class ModelAnalyzer:
     def __init__(self, model_id, hardware, config_file=None):
@@ -15,10 +25,12 @@ class ModelAnalyzer:
             # get the current file directory
             current_dir = os.path.dirname(os.path.abspath(__file__))
             # auto search the config
-            for file in os.listdir(current_dir+"/configs"):
+            for file in os.listdir(current_dir + "/configs"):
                 if file.endswith(".py") and file.replace(".py", "") in model_id:
                     config_file = "configs/" + file
-        assert config_file is not None, "config file is not found, please specify it manually."
+        assert (
+            config_file is not None
+        ), "config file is not found, please specify it manually."
         print(f"use config file {config_file}")
         self.model_params = AutoConfig.from_pretrained(model_id, trust_remote_code=True)
         self.config = importlib.import_module(
@@ -77,14 +89,14 @@ class ModelAnalyzer:
             if not os.path.exists(save_path):
                 os.makedirs(save_path)
             save_path += f"{self.model_id[self.model_id.rfind('/'):]}"
-        
+
         decode_file_name = f"{save_path}_decode.csv"
         prefill_file_name = f"{save_path}_prefill.csv"
         print(f"save to {decode_file_name} and {prefill_file_name}")
 
-        for file_name,stage in [
-            (decode_file_name,"decode"),
-            (prefill_file_name,"prefill")
+        for file_name, stage in [
+            (decode_file_name, "decode"),
+            (prefill_file_name, "prefill"),
         ]:
             with open(file_name, "a+") as f:
 
@@ -97,10 +109,12 @@ class ModelAnalyzer:
                 )
             with open(file_name, "a+") as f:
                 for layer_name, result in self.results[stage].items():
-                    f.write(f"{layer_name},{str_number(result['OPs'])},{str_number(result['memory_access'])}B,{str_number(result['arithmetic_intensity'])},{str_number(result['performance'])},{result['bound']},{str_number(result['load_weight'])}B,{str_number(result['load_act'])}B,{str_number(result['store_act'])}B,{str_number(result['load_kv_cache'])}B,{str_number(result['store_kv_cache'])}B,{str_number_time(result['time_cost'])}s\n")
+                    f.write(
+                        f"{layer_name},{str_number(result['OPs'])},{str_number(result['memory_access'])}B,{str_number(result['arithmetic_intensity'])},{str_number(result['performance'])},{result['bound']},{str_number(result['load_weight'])}B,{str_number(result['load_act'])}B,{str_number(result['store_act'])}B,{str_number(result['load_kv_cache'])}B,{str_number(result['store_kv_cache'])}B,{str_number_time(result['time_cost'])}s\n"
+                    )
 
     def analyze(self, seqlen, batchsize, w_bit=16, a_bit=16, kv_bit=None):
-        self.results={"decode":{},"prefill":{}}
+        self.results = {"decode": {}, "prefill": {}}
         if kv_bit is None:
             kv_bit = a_bit
         self.w_bit = w_bit
@@ -119,7 +133,7 @@ class ModelAnalyzer:
         hidden_size = config.get_hidden_size(model_params)
         num_key_value_heads = config.get_num_key_value_heads(model_params)
         num_hidden_layers = config.get_num_hidden_layers(model_params)
-        vocab_size= config.get_vocab_size(model_params)
+        vocab_size = config.get_vocab_size(model_params)
 
         for name, (ic, oc, _) in config.get_linear_layers(model_params).items():
             # for linear layers
@@ -193,7 +207,7 @@ class ModelAnalyzer:
             store_kv_cache=0,
         )
 
-        for name in ["self_attn_norm","mlp_norm"]:
+        for name in ["self_attn_norm", "mlp_norm"]:
             # sum sub pow sum div mul add
             self._analyze_to_results(
                 "decode",
@@ -206,7 +220,7 @@ class ModelAnalyzer:
                 store_kv_cache=0,
             )
 
-        for name in ["self_attn_add","mlp_add"]:
+        for name in ["self_attn_add", "mlp_add"]:
             self._analyze_to_results(
                 "decode",
                 name,
@@ -261,7 +275,7 @@ class ModelAnalyzer:
             load_kv_cache=0,
             store_kv_cache=0,
         )
-        for name in ["self_attn_norm","mlp_norm"]:
+        for name in ["self_attn_norm", "mlp_norm"]:
             self._analyze_to_results(
                 "prefill",
                 name,
@@ -272,7 +286,7 @@ class ModelAnalyzer:
                 load_kv_cache=0,
                 store_kv_cache=0,
             )
-        for name in ["self_attn_add","mlp_add"]:
+        for name in ["self_attn_add", "mlp_add"]:
             self._analyze_to_results(
                 "prefill",
                 name,
@@ -285,18 +299,38 @@ class ModelAnalyzer:
             )
 
         # compute total
-        total_results = {"decode":{},"prefill":{}}
+        total_results = {"decode": {}, "prefill": {}}
         for data_name in ALL_DATA_NAMES:
             total_results["decode"][data_name] = 0
             total_results["prefill"][data_name] = 0
-        for stage in ["decode","prefill"]:
+        for stage in ["decode", "prefill"]:
             for layer_name, result in self.results[stage].items():
                 for data_name in ALL_DATA_NAMES:
-                    total_results[stage][data_name] += result[data_name]*num_hidden_layers
+                    total_results[stage][data_name] += (
+                        result[data_name] * num_hidden_layers
+                    )
+
+        # memory footprint
+        weight_kv_footprint = (
+            total_results["prefill"]["load_weight"]
+            + total_results["prefill"]["store_kv_cache"]
+        )
+        decode_tmporary_activation = 0
+        for layer_name, result in self.results["decode"].items():
+            decode_tmporary_activation += result["store_act"]
+        total_results["decode"]["memory_footprint"] = (
+            decode_tmporary_activation + weight_kv_footprint
+        )
+        prefill_tmporary_activation = 0
+        for layer_name, result in self.results["prefill"].items():
+            prefill_tmporary_activation += result["store_act"]
+        total_results["prefill"]["memory_footprint"] = (
+            prefill_tmporary_activation + weight_kv_footprint
+        )
 
         # lm_head
-        name="lm_head"
-        for stage in ["prefill","decode"]:
+        name = "lm_head"
+        for stage in ["prefill", "decode"]:
             self._analyze_to_results(
                 stage,
                 name,
@@ -309,6 +343,18 @@ class ModelAnalyzer:
             )
             for data_name in ALL_DATA_NAMES:
                 total_results[stage][data_name] += self.results[stage][name][data_name]
-        self.results["total_results"]=total_results
 
+        self.results["total_results"] = total_results
         return self.results
+
+    def analyze_generate_task(
+        self, prompt_len, gen_len, batchsize, w_bit=16, a_bit=16, kv_bit=None
+    ):
+        prefill_result = self.analyze(
+            prompt_len + gen_len, batchsize, w_bit, a_bit, kv_bit
+        )
+        time_cost=prefill_result["total_results"]["prefill"]["time_cost"]
+        for i in range(prompt_len, prompt_len + gen_len):
+            result = self.analyze(i, batchsize, w_bit, a_bit, kv_bit)
+            time_cost=result["total_results"]["decode"]["time_cost"]
+        return {"time_cost":time_cost}

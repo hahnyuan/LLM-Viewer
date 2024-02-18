@@ -4,7 +4,7 @@ import LeftPannel from "./components/LeftPannel.vue"
 import Header from "./components/Header.vue"
 import { ref, computed, provide } from 'vue';
 
-const step = ref("settings");
+const step = ref("LLaMA");
 const settingsData = ref({ ip_port: '127.0.0.1:9600' });
 const selectedNodeInfo = ref({});
 const selectedNodeId = ref("");
@@ -35,7 +35,6 @@ provide("selectedNodeListRef", selectedNodeListRef);
 </template>
 
 <style>
-
 .app_container {
   /* display: flex;
   flex-direction: column;
