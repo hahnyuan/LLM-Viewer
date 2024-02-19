@@ -1,6 +1,13 @@
 <template>
-    <h2>Inference Settings</h2>
-    <!-- 两个滑块，一个是batchsize，一个是sequence length -->
+    <h2>Inference Config</h2>
+    <!-- radio，可选 decode prefill 默认decode-->
+    <div>
+        Stage:
+        <input type="radio" v-model="inference_stage" id="decode" value="decode" checked>
+        <label for="decode">Decode</label>
+        <input type="radio" v-model="inference_stage" id="prefill" value="prefill">
+        <label for="prefill">Prefill</label>
+    </div>
     <div class="slider">
         Batchsize:
         <input type="range" min="1" max="256" value="1" oninput="batch_size.innerText = this.value">
@@ -16,7 +23,7 @@
         <input type="range" min="1" max="4096" value="1024" oninput="gen_length.innerText = this.value">
         <p id="gen_length">1</p>
     </div>
-    <h2>Optimization Settings</h2>
+    <h2>Optimization Config</h2>
     <div class="slider">
         Weight Quantization:
         <select>
@@ -51,6 +58,20 @@ import { inject, ref, watch, computed } from 'vue';
 const ip_port = inject('settingsData').value.ip_port
 const serverStatus = inject('serverStatus');
 const selectedNodeInfo = inject('selectedNodeInfo');
+const graphUpdateTrigger = inject('graphUpdateTrigger');
+
+
+const InferenceConfig = inject('InferenceConfig');
+
+const inference_stage = ref('inference_stage');
+
+// 当inference_stage改变时，更新InferenceConfig.step
+watch(inference_stage, (new_stage) => {
+    console.log("inference_stage", new_stage)
+    InferenceConfig.value.stage = new_stage
+    graphUpdateTrigger.value += 1
+})
+
 
 </script>
 

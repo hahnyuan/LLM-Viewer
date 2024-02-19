@@ -1,6 +1,4 @@
 <template>
-    <!-- 这里放7个按钮 -->
-    <!-- 加粗 -->
     <div class="title">LLMViewer v0.1</div>
     <div class="header_button">
         <!-- <button @click="change_step('settings')" :class="{ active: step == 'settings' }">Settings</button> -->
@@ -10,9 +8,9 @@
             <option value="ChatGLM">ChatGLM</option>
         </select>
 
-        | Stage:
+        <!-- | Stage:
         <button @click="change_step('onnx_modifier')" :class="{ active: step == 'onnx_modifier' }">Prefill</button>
-        <button @click="change_step('hm_onnx_viewer')" :class="{ active: step == 'hm_onnx_viewer' }">Decode</button>
+        <button @click="change_step('hm_onnx_viewer')" :class="{ active: step == 'hm_onnx_viewer' }">Decode</button> -->
     </div>
 </template>
 

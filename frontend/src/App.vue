@@ -11,6 +11,7 @@ const selectedNodeId = ref("");
 const serverStatus = ref("idel");
 const graphUpdateTrigger = ref(1);
 const selectedNodeListRef = ref(new Array())
+
 provide("settingsData", settingsData);
 provide("selectedNodeInfo", selectedNodeInfo);
 provide("selectedNodeId", selectedNodeId);
@@ -18,6 +19,10 @@ provide("serverStatus", serverStatus);
 provide("step", step);
 provide("graphUpdateTrigger", graphUpdateTrigger);
 provide("selectedNodeListRef", selectedNodeListRef);
+
+
+const InferenceConfig = ref({"stage": "decode"});
+provide("InferenceConfig", InferenceConfig);
 
 </script>
 
@@ -40,15 +45,12 @@ provide("selectedNodeListRef", selectedNodeListRef);
   flex-direction: column;
   width: 98vw; */
   width: 100%;
-  /* 设置容器的宽度为100% */
   height: 100vh;
-  /* 设置容器的高度为100% */
 
 }
 
 .upper_header {
   flex: 1;
-  /* 设置顶部区块占据剩余的可用空间 */
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -63,13 +65,6 @@ provide("selectedNodeListRef", selectedNodeListRef);
 .bottom-block {
   display: flex;
   flex-direction: row;
-  /* 使用flex布局 */
-  /* flex-wrap: wrap; */
   height: calc(100% - 60px);
-  /* 允许子元素换行 */
-  /* display: flex;
-  flex: 1;
-  height: 90vh;
-  设置底部区块占据剩余的可用空间 */
 }
 </style>

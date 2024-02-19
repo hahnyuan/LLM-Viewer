@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask,request
 from flask import render_template
 from flask_cors import CORS
 from get_model_graph import get_model_graph
@@ -8,33 +8,16 @@ cors = CORS(app, resources={r"/*": {"origins": "*"}})
 
 
 @app.route("/")
-def get_graph():
-    nodes = [
-        {
-            "label": "LayerNorm",
-            "id": "1",
-            "description": "OPs:xx,\nvv:ds",
-            "panels": [
-                {"title": "OPs", "value": "59M"},
-                {"title": "Access", "value": "34MB"},
-            ],
-        },
-        {
-            "label": "q_proj",
-            "id": "2",
-            "panels": [
-                {"title": "OPs", "value": "59M"},
-                {"title": "Access", "value": "34MB"},
-            ],
-        },
-    ]
+def index():
+    return "backend server ready."
 
-    edges = [{"source": "1", "target": "2"}]
+@app.route("/get_graph",methods=["POST"])
+def get_graph():
+    inference_config=request.json["inference_config"]
     nodes, edges = get_model_graph(
-        "meta-llama/Llama-2-7b-hf", 1, 2048, "configs/Llama.py"
+        "meta-llama/Llama-2-7b-hf","nvidia_V100","configs/Llama.py",inference_config, 
     )
     return {"nodes": nodes, "edges": edges}
-
 
 if __name__ == "__main__":
     app.run(debug=True)

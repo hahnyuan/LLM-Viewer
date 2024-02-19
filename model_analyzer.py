@@ -114,6 +114,10 @@ class ModelAnalyzer:
                     )
 
     def analyze(self, seqlen, batchsize, w_bit=16, a_bit=16, kv_bit=None):
+        """
+        return: results
+        format is {"decode":{layer_name:{"OPs":,"memory_access":,"arithmetic_intensity":,"performance":,"bound":,"load_weight":,"load_act":,"store_act":,"load_kv_cache":,"store_kv_cache":,"time_cost":}},"prefill":{layer_name:{"OPs":,"memory_access":,"arithmetic_intensity":,"performance":,"bound":,"load_weight":,"load_act":,"store_act":,"load_kv_cache":,"store_kv_cache":,"time_cost":}},"total_results":{decode:{},prefill:{}}}
+        """
         self.results = {"decode": {}, "prefill": {}}
         if kv_bit is None:
             kv_bit = a_bit
@@ -135,7 +139,7 @@ class ModelAnalyzer:
         num_hidden_layers = config.get_num_hidden_layers(model_params)
         vocab_size = config.get_vocab_size(model_params)
 
-        for name, (ic, oc, _) in config.get_linear_layers(model_params).items():
+        for name, (ic, oc) in config.get_linear_layers(model_params).items():
             # for linear layers
             is_kv_proj = name in ["k_proj", "v_proj"]
             is_normal_proj = not is_kv_proj
@@ -207,7 +211,7 @@ class ModelAnalyzer:
             store_kv_cache=0,
         )
 
-        for name in ["self_attn_norm", "mlp_norm"]:
+        for name in ["attn_norm", "mlp_norm"]:
             # sum sub pow sum div mul add
             self._analyze_to_results(
                 "decode",
@@ -220,13 +224,24 @@ class ModelAnalyzer:
                 store_kv_cache=0,
             )
 
-        for name in ["self_attn_add", "mlp_add"]:
+        for name in ["attn_add", "mlp_add"]:
             self._analyze_to_results(
                 "decode",
                 name,
                 OPs=batchsize * hidden_size * 1,
                 load_weight=0,
                 load_act=batchsize * hidden_size * 1 * a_byte,
+                store_act=batchsize * hidden_size * 1 * a_byte,
+                load_kv_cache=0,
+                store_kv_cache=0,
+            )
+        for name in ["mlp_act"]:
+            self._analyze_to_results(
+                "decode",
+                name,
+                OPs=batchsize * hidden_size * 1 *2,
+                load_weight=0,
+                load_act=batchsize * hidden_size * 1 * a_byte *2,
                 store_act=batchsize * hidden_size * 1 * a_byte,
                 load_kv_cache=0,
                 store_kv_cache=0,
@@ -275,7 +290,7 @@ class ModelAnalyzer:
             load_kv_cache=0,
             store_kv_cache=0,
         )
-        for name in ["self_attn_norm", "mlp_norm"]:
+        for name in ["attn_norm", "mlp_norm"]:
             self._analyze_to_results(
                 "prefill",
                 name,
@@ -286,13 +301,24 @@ class ModelAnalyzer:
                 load_kv_cache=0,
                 store_kv_cache=0,
             )
-        for name in ["self_attn_add", "mlp_add"]:
+        for name in ["attn_add", "mlp_add"]:
             self._analyze_to_results(
                 "prefill",
                 name,
                 OPs=batchsize * hidden_size * seqlen * 1,
                 load_weight=0,
                 load_act=batchsize * hidden_size * seqlen * a_byte,
+                store_act=batchsize * hidden_size * seqlen * a_byte,
+                load_kv_cache=0,
+                store_kv_cache=0,
+            )
+        for name in ["mlp_act"]:
+            self._analyze_to_results(
+                "prefill",
+                name,
+                OPs=batchsize * hidden_size * seqlen * 1 *2,
+                load_weight=0,
+                load_act=batchsize * hidden_size * seqlen * a_byte*2,
                 store_act=batchsize * hidden_size * seqlen * a_byte,
                 load_kv_cache=0,
                 store_kv_cache=0,

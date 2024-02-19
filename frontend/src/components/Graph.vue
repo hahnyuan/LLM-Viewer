@@ -31,6 +31,7 @@ var settingsData = inject('settingsData')
 var selectedNodeInfo = inject('selectedNodeInfo')
 var selectedNodeId = inject('selectedNodeId')
 var graphUpdateTrigger = inject('graphUpdateTrigger')
+var InferenceConfig = inject('InferenceConfig')
 const step = inject('step')
 const searchText = ref('')
 var searchResult = []
@@ -53,19 +54,25 @@ window.onresize = () => {
 function graphUpdate(is_fit_view = false) {
     const ip_port = "127.0.0.1:5000"
     console.log("graphUpdate", settingsData)
-    const url = 'http://' + ip_port + '/'
-    axios.get(url).then(function (response) {
+    const url = 'http://' + ip_port + '/get_graph'
+    axios.post(url, { inference_config: InferenceConfig.value }).then(function (response) {
         console.log(response);
         graph_data = response.data
         graph.changeData(graph_data)
+        graph.updateLayout({
+            type: 'dagre',
+            nodesep: 10,
+            ranksep: 20,
+            controlPoints: true,
+        });
         console.log(graph_data)
-        graph.render();
+        // graph.render();
         // graph.refresh()
         selectedNodeInfo.value = {}
         selectedNodeId.value = ""
         nowFocusNode = null
         if (is_fit_view) {
-            graph.render();
+            // graph.render();
             setTimeout(() => {
                 graph.fitView();
             }, 10);
@@ -161,11 +168,11 @@ function SelectNode(nodeId, moveView = false) {
 
 onMounted(() => {
     graph = new G6.Graph(graph_config);  // 创建.
-    graph.on('node:click', (event) => {
-        const { item } = event;
-        const node = item.getModel();
-        clickNode(node);
-    });
+    // graph.on('node:click', (event) => {
+    //     const { item } = event;
+    //     const node = item.getModel();
+    //     clickNode(node);
+    // });
     graph.render();
 })
 
@@ -199,8 +206,6 @@ function clickNode(node) {
     height: auto;
     max-height: 50vh;
     background-color: #f1f1f1b7;
-    /* border: 1px solid #ccc; */
-    /* box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2); */
     padding: 3px;
     overflow-y: auto;
 }
@@ -209,11 +214,7 @@ function clickNode(node) {
     position: absolute;
     top: 10px;
     left: 10px;
-    /* width: 200px;
-    height: 200px; */
     background-color: #f1f1f1b7;
-    /* border: 1px solid #ccc; */
-    /* box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2); */
-    /* padding: 10px; */
 }
+
 </style>
