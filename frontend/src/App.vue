@@ -4,7 +4,7 @@ import LeftPannel from "./components/LeftPannel.vue"
 import Header from "./components/Header.vue"
 import { ref, computed, provide } from 'vue';
 
-const step = ref("LLaMA");
+const model_id = ref("meta-llama/Llama-2-7b-hf");
 const settingsData = ref({ ip_port: '127.0.0.1:9600'});
 const selectedNodeInfo = ref({});
 const selectedNodeId = ref("");
@@ -16,7 +16,7 @@ provide("settingsData", settingsData);
 provide("selectedNodeInfo", selectedNodeInfo);
 provide("selectedNodeId", selectedNodeId);
 provide("serverStatus", serverStatus);
-provide("step", step);
+provide("model_id", model_id);
 provide("graphUpdateTrigger", graphUpdateTrigger);
 provide("selectedNodeListRef", selectedNodeListRef);
 

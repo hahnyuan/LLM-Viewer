@@ -15,7 +15,7 @@ def index():
 def get_graph():
     inference_config=request.json["inference_config"]
     nodes, edges = get_model_graph(
-        "meta-llama/Llama-2-7b-hf","nvidia_V100","configs/Llama.py",inference_config, 
+        request.json["model_id"],"nvidia_V100",None,inference_config, 
     )
     return {"nodes": nodes, "edges": edges}
 

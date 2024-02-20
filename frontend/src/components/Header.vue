@@ -1,33 +1,27 @@
 <template>
     <div class="title">LLMViewer v0.1</div>
     <div class="header_button">
-        <!-- <button @click="change_step('settings')" :class="{ active: step == 'settings' }">Settings</button> -->
         | Model:
-        <select v-model="selectedOption" @change="handleSelection">
-            <option value="LLaMA">LLaMA</option>
-            <option value="ChatGLM">ChatGLM</option>
+        <select v-model="selectedOption" @change="handleSelection" >
+            <option value="meta-llama/Llama-2-7b-hf">meta-llama/Llama-2-7b-hf</option>
+            <option value="meta-llama/Llama-2-13b-hf">meta-llama/Llama-2-13b-hf</option>
+            <option value="meta-llama/Llama-2-70b-hf">meta-llama/Llama-2-70b-hf</option>
+            <!-- <option value="ChatGLM">ChatGLM</option> -->
         </select>
-
-        <!-- | Stage:
-        <button @click="change_step('onnx_modifier')" :class="{ active: step == 'onnx_modifier' }">Prefill</button>
-        <button @click="change_step('hm_onnx_viewer')" :class="{ active: step == 'hm_onnx_viewer' }">Decode</button> -->
     </div>
 </template>
 
 <script setup>
 import { inject, ref, watch, computed } from 'vue';
-const step = inject('step');
-const settingsData = inject('settingsData');
+const model_id = inject('model_id');
+const graphUpdateTrigger = inject('graphUpdateTrigger');
 
-// function change_step(new_step) {
-//     console.log("change_step", new_step)
-//     step.value = new_step
-// }
-var selectedOption = ref('LLaMA');
+var selectedOption = ref('meta-llama/Llama-2-7b-hf');
 
 function handleSelection() {
     console.log("handleSelection", selectedOption.value)
-    step.value = selectedOption.value
+    model_id.value = selectedOption.value
+    graphUpdateTrigger.value += 1
 
 }
 

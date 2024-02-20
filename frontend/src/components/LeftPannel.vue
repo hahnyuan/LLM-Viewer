@@ -1,6 +1,6 @@
 <template>
     <div class="left_control">
-        <Config v-if="step == 'LLaMA'"></Config>
+        <Config></Config>
     </div>
 </template>
 
@@ -8,10 +8,10 @@
 import Config from "./left_controls/Config.vue"
 import { inject, ref, watch, computed, onMounted } from 'vue';
 
-const step = inject('step');
+const model_id = inject('model_id');
 
 onMounted(() => {
-    console.log("LeftControl onMounted", step.value)
+    console.log("LeftControl onMounted", model_id.value)
 })
 
 </script>
