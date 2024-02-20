@@ -51,20 +51,31 @@ window.onresize = () => {
     }
 };
 
-function graphUpdate(is_fit_view = false) {
+function graphUpdate(is_fit_view = false, is_init = false) {
     const ip_port = "127.0.0.1:5000"
     console.log("graphUpdate", settingsData)
     const url = 'http://' + ip_port + '/get_graph'
     axios.post(url, { inference_config: InferenceConfig.value }).then(function (response) {
         console.log(response);
         graph_data = response.data
-        graph.changeData(graph_data)
-        graph.updateLayout({
-            type: 'dagre',
-            nodesep: 10,
-            ranksep: 20,
-            controlPoints: true,
-        });
+        if (is_init) {
+            graph.changeData(graph_data)
+            // graph.updateLayout({
+            //     type: 'dagre',
+            //     nodesep: 10,
+            //     ranksep: 20,
+            //     controlPoints: true,
+            // });
+        }else{
+            // iterate each node
+            graph_data.nodes.forEach(function (node) {
+                // update the node
+                graph.updateItem(node.id, {
+                    description: node.description,
+                });
+            });
+
+        }
         console.log(graph_data)
         // graph.render();
         // graph.refresh()
@@ -86,13 +97,7 @@ function graphUpdate(is_fit_view = false) {
 
 }
 
-graphUpdate(true);
-
-watch(() => step.value, () => {
-    graphUpdate(true);
-
-})
-watch(() => graphUpdateTrigger.value, () => graphUpdate(true))
+watch(() => graphUpdateTrigger.value, () => graphUpdate(false))
 
 function handleSearch(newText, oldText) {
     console.log("handleSearch", newText)
@@ -173,6 +178,7 @@ onMounted(() => {
     //     const node = item.getModel();
     //     clickNode(node);
     // });
+    graphUpdate(true, true);
     graph.render();
 })
 
@@ -216,5 +222,4 @@ function clickNode(node) {
     left: 10px;
     background-color: #f1f1f1b7;
 }
-
 </style>
