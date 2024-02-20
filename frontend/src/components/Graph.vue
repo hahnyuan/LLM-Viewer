@@ -60,12 +60,6 @@ function graphUpdate(is_fit_view = false, is_init = false) {
         graph_data = response.data
         if (is_init) {
             graph.changeData(graph_data)
-            // graph.updateLayout({
-            //     type: 'dagre',
-            //     nodesep: 10,
-            //     ranksep: 20,
-            //     controlPoints: true,
-            // });
         }else{
             // iterate each node
             graph_data.nodes.forEach(function (node) {
@@ -91,7 +85,7 @@ function graphUpdate(is_fit_view = false, is_init = false) {
 
     })
         .catch(function (error) {
-            console.log("errorin graphUpdate");
+            console.log("error in graphUpdate");
             console.log(error);
         });
 

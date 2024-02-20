@@ -10,37 +10,45 @@
     </div>
     <div class="slider">
         Batchsize:
-        <input type="range" min="1" max="256" value="1" oninput="batch_size.innerText = this.value">
+        <input type="range" min="1" max="256" value="1" v-model.lazy="batch_size" oninput="batch_size.innerText = this.value">
         <p id="batch_size">1</p>
     </div>
     <div class="slider">
-        Prompt Length:
-        <input type="range" min="1" max="4096" value="1024" oninput="seq_length.innerText = this.value">
+        Seqence Length:
+        <input type="range" min="1" max="4096" value="1024" v-model.lazy="seq_length" oninput="seq_length.innerText = this.value">
         <p id="seq_length">1024</p>
     </div>
-    <div class="slider">
+    <!-- <div class="slider">
         Generation Length:
         <input type="range" min="1" max="4096" value="1024" oninput="gen_length.innerText = this.value">
         <p id="gen_length">1</p>
-    </div>
+    </div> -->
     <h2>Optimization Config</h2>
     <div class="slider">
         Weight Quantization:
-        <select>
+        <select v-model="w_quant">
             <option value="FP16">FP16</option>
             <option value="INT8">INT8</option>
-            <option value="INT4">INT8</option>
+            <option value="INT4">INT4</option>
         </select>
     </div>
     <div class="slider">
         Activation Quantization
-        <select>
+        <select v-model="a_quant">
             <option value="FP16">FP16</option>
             <option value="INT8">INT8</option>
-            <option value="INT4">INT8</option>
+            <option value="INT4">INT4</option>
         </select>
     </div>
     <div class="slider">
+        KV Cache Quantization
+        <select v-model="kv_quant">
+            <option value="FP16">FP16</option>
+            <option value="INT8">INT8</option>
+            <option value="INT4">INT4</option>
+        </select>
+    </div>
+    <!-- <div class="slider">
         Use Flash Attention
         <input type="checkbox">
     </div>
@@ -49,7 +57,7 @@
         <select>
             <option value="Greedy">Greedy</option>
         </select>
-    </div>
+    </div> -->
 </template>
 
 <script setup>
@@ -63,7 +71,12 @@ const graphUpdateTrigger = inject('graphUpdateTrigger');
 
 const InferenceConfig = inject('InferenceConfig');
 
-const inference_stage = ref('inference_stage');
+const inference_stage = ref('');
+const batch_size = ref(1);
+const seq_length = ref(1);
+const w_quant = ref('FP16');
+const a_quant = ref('FP16');
+const kv_quant = ref('FP16');
 
 // 当inference_stage改变时，更新InferenceConfig.step
 watch(inference_stage, (new_stage) => {
@@ -72,6 +85,35 @@ watch(inference_stage, (new_stage) => {
     graphUpdateTrigger.value += 1
 })
 
+watch(batch_size, (n) => {
+    console.log("inference_stage", n)
+    InferenceConfig.value.batch_size = n
+    graphUpdateTrigger.value += 1
+})
+
+watch(seq_length, (n) => {
+    console.log("seq_length", n)
+    InferenceConfig.value.seq_length = n
+    graphUpdateTrigger.value += 1
+})
+
+watch(w_quant, (n) => {
+    console.log("w_quant", n)
+    InferenceConfig.value.w_quant = n
+    graphUpdateTrigger.value += 1
+})
+
+watch(a_quant, (n) => {
+    console.log("a_quant", n)
+    InferenceConfig.value.a_quant = n
+    graphUpdateTrigger.value += 1
+})
+
+watch(kv_quant, (n) => {
+    console.log("kv_quant", n)
+    InferenceConfig.value.kv_quant = n
+    graphUpdateTrigger.value += 1
+})
 
 </script>
 

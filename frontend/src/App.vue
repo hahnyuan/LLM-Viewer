@@ -5,7 +5,7 @@ import Header from "./components/Header.vue"
 import { ref, computed, provide } from 'vue';
 
 const step = ref("LLaMA");
-const settingsData = ref({ ip_port: '127.0.0.1:9600' });
+const settingsData = ref({ ip_port: '127.0.0.1:9600'});
 const selectedNodeInfo = ref({});
 const selectedNodeId = ref("");
 const serverStatus = ref("idel");
@@ -21,7 +21,7 @@ provide("graphUpdateTrigger", graphUpdateTrigger);
 provide("selectedNodeListRef", selectedNodeListRef);
 
 
-const InferenceConfig = ref({"stage": "decode"});
+const InferenceConfig = ref({"stage": "decode", batch_size:1 ,seq_length:2, w_quant:"FP16", a_quant:"FP16", kv_quant:"FP16"});
 provide("InferenceConfig", InferenceConfig);
 
 </script>
