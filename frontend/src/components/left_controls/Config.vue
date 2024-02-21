@@ -61,11 +61,14 @@
         </select>
     </div> -->
     <h2>Network-wise Analysis</h2>
-    <div>
+    <div v-if="inference_stage=='decode'">
         <h3>Decode</h3>
         <div v-for="(value, key) in total_results['decode']" :key="key" class="network-wise-info-item">
             {{ key }}: <br />{{ value }}
         </div>
+        
+    </div>
+    <div v-if="inference_stage=='prefill'">
         <h3>Prefill</h3>
         <div v-for="(value, key) in total_results['prefill']" :key="key" class="network-wise-info-item">
             {{ key }}: <br />{{ value }}
@@ -82,7 +85,7 @@ const graphUpdateTrigger = inject('graphUpdateTrigger');
 const InferenceConfig = inject('InferenceConfig');
 const total_results = inject('total_results');
 
-const inference_stage = ref('');
+const inference_stage = ref('decode');
 const batch_size = ref(1);
 const seq_length = ref(1024);
 const w_quant = ref('FP16');

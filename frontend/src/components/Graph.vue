@@ -12,7 +12,7 @@
         </div>
         <div class="float-node-info-window">
             <div v-if="selected_node_id">
-                <strong>Node {{ selected_node_id }} Info</strong>
+                <strong>{{ selected_node_id }}</strong>
             </div>
             <div v-for="(value, key) in all_node_info[selected_node_id]" :key="key" class="float-node-info-item">
                 {{ key }}: <br />{{ value }}
