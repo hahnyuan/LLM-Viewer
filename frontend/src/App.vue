@@ -7,10 +7,12 @@ import { ref, computed, provide } from 'vue';
 const model_id = ref("meta-llama/Llama-2-7b-hf");
 const hardware = ref("nvidia_V100");
 const graphUpdateTrigger = ref(1);
+const total_results = ref({});
 
 provide("model_id", model_id);
 provide("hardware", hardware);
 provide("graphUpdateTrigger", graphUpdateTrigger);
+provide("total_results", total_results);
 
 
 const InferenceConfig = ref({"stage": "decode", batch_size:1 ,seq_length:1024, w_quant:"FP16", a_quant:"FP16", kv_quant:"FP16"});

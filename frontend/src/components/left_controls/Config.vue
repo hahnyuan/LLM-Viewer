@@ -9,12 +9,14 @@
     </div>
     <div class="slider">
         Batchsize:
-        <input type="range" min="1" max="256" value="1" v-model.lazy="batch_size" oninput="batch_size.innerText = this.value">
+        <input type="range" min="1" max="256" value="1" v-model.lazy="batch_size"
+            oninput="batch_size.innerText = this.value">
         <span id="batch_size">1</span>
     </div>
     <div class="slider">
         Seqence Length:
-        <input type="range" min="1" max="4096" value="1024" v-model.lazy="seq_length" oninput="seq_length.innerText = this.value">
+        <input type="range" min="1" max="4096" value="1024" v-model.lazy="seq_length"
+            oninput="seq_length.innerText = this.value">
         <span id="seq_length">1024</span>
     </div>
     <!-- <div class="slider">
@@ -47,6 +49,7 @@
             <option value="INT4">INT4</option>
         </select>
     </div>
+
     <!-- <div class="slider">
         Use Flash Attention
         <input type="checkbox">
@@ -57,6 +60,17 @@
             <option value="Greedy">Greedy</option>
         </select>
     </div> -->
+    <h2>Network-wise Analysis</h2>
+    <div>
+        <h3>Decode</h3>
+        <div v-for="(value, key) in total_results['decode']" :key="key" class="network-wise-info-item">
+            {{ key }}: <br />{{ value }}
+        </div>
+        <h3>Prefill</h3>
+        <div v-for="(value, key) in total_results['prefill']" :key="key" class="network-wise-info-item">
+            {{ key }}: <br />{{ value }}
+        </div>
+    </div>
 </template>
 
 <script setup>
@@ -66,6 +80,7 @@ const graphUpdateTrigger = inject('graphUpdateTrigger');
 
 
 const InferenceConfig = inject('InferenceConfig');
+const total_results = inject('total_results');
 
 const inference_stage = ref('');
 const batch_size = ref(1);
@@ -124,6 +139,10 @@ watch(kv_quant, (n) => {
     /* 当鼠标悬停时，改变文字颜色 */
     color: #0000ff;
     cursor: pointer;
-
 }
+.network-wise-info-item {
+    padding: 3px;
+    border-top: 1px solid #e2e2e2;
+}
+
 </style>

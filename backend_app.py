@@ -14,10 +14,10 @@ def index():
 @app.route("/get_graph",methods=["POST"])
 def get_graph():
     inference_config=request.json["inference_config"]
-    nodes, edges = get_model_graph(
+    nodes, edges,total_results = get_model_graph(
         request.json["model_id"],request.json["hardware"],None,inference_config, 
     )
-    return {"nodes": nodes, "edges": edges}
+    return {"nodes": nodes, "edges": edges, "total_results":total_results}
 
 @app.route("/node_info",methods=["POST"])
 def node_info():

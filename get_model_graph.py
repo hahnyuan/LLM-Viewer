@@ -47,6 +47,7 @@ def get_model_graph(model_id, hardware, config_path, inference_config):
         seqlen=seq_length, batchsize=batch_size, w_bit=w_bit, a_bit=a_bit, kv_bit=kv_bit
     )
     stage = inference_config["stage"]
+    total_results= result["total_results"]
     result = result[stage]
 
     nodes = [
@@ -79,4 +80,4 @@ def get_model_graph(model_id, hardware, config_path, inference_config):
             memory_access = result[name]["memory_access"]
             info=result[name]
         write_to_node(name, OPs, memory_access, info, input_names)
-    return nodes, edges
+    return nodes, edges, total_results

@@ -11,8 +11,11 @@
             </div>
         </div>
         <div class="float-node-info-window">
-            <div v-for="(value, key) in selectedNodeInfo" :key="key">
-                {{ key }}: <br />{{ value }}<br /><br />
+            <div v-if="selected_node_id">
+                <strong>Node {{ selected_node_id }} Info</strong>
+            </div>
+            <div v-for="(value, key) in all_node_info[selected_node_id]" :key="key" class="float-node-info-item">
+                {{ key }}: <br />{{ value }}
             </div>
         </div>
     </div>
@@ -30,16 +33,16 @@ const hardware = inject('hardware')
 const graphUpdateTrigger = inject('graphUpdateTrigger')
 const InferenceConfig = inject('InferenceConfig')
 const ip_port = "127.0.0.1:5000"
+const total_results = inject('total_results')
 
 var graph = null;
 var graph_data;
-var all_node_info = {}
+const all_node_info = ref({})
 
 const searchText = ref('')
 var searchResult = []
 
-var selectedNodeInfo = ref({"a":"b"})
-var selected_node_id = ""
+const selected_node_id = ref("")
 
 const changeGraphSizeWaitTimer = ref(false);
 window.onresize = () => {
@@ -61,7 +64,10 @@ function graphUpdate(is_fit_view = false, is_init = false) {
     axios.post(url, { model_id: model_id.value, hardware: hardware.value, inference_config: InferenceConfig.value }).then(function (response) {
         console.log(response);
         graph_data = response.data
-        all_node_info=graph_data.nodes
+        for (let i = 0; i < graph_data.nodes.length; i++) {
+            all_node_info.value[graph_data.nodes[i].id] = graph_data.nodes[i].info;
+        }
+        total_results.value= response.data.total_results
         if (is_init) {
             graph.changeData(graph_data)
         } else {
@@ -77,9 +83,9 @@ function graphUpdate(is_fit_view = false, is_init = false) {
         console.log(graph_data)
         // graph.render();
         // graph.refresh()
-        selectedNodeInfo.value = {}
-        selected_node_id = ""
-        nowFocusNode = null
+        // selectedNodeInfo.value = {}
+        // selected_node_id = ""
+        // nowFocusNode = null
         if (is_fit_view) {
             // graph.render();
             setTimeout(() => {
@@ -148,30 +154,7 @@ function SelectNode(nodeId, moveView = false) {
         nowFocusNode = node
     }
     
-    // for (node_info in all_node_info) {
-    for (let node_info of Object.values(all_node_info)) {
-        console.log(node_info,nodeId)
-        if (node_info['id']==nodeId) {
-            
-            selectedNodeInfo.value = node_info["info"]
-        }
-    }
-    // selectedNodeInfo.value = all_node_info[nodeId]
-    // axios.post(url, { node_id: nodeId }).then(function (response) {
-    //     console.log(response);
-    //     // 将返回回来的json数据转换成node_info
-    //     const nodeInfo = response.data
-    //     console.log(url, nodeInfo)
-    //     // 将nodeInfo传递给祖先组件
-    //     node.nodeInfo = nodeInfo
-    //     selectedNodeInfo.value = nodeInfo
-    //     selectedNodeId.value = nodeId
-
-    // })
-    //     .catch(function (error) {
-    //         console.log(error);
-    //         alert("失败", url)
-    //     });
+    selected_node_id.value= nodeId
 }
 
 onMounted(() => {
@@ -225,4 +208,10 @@ function clickNode(node) {
     left: 10px;
     background-color: #f1f1f1b7;
 }
+
+.float-node-info-item {
+    padding: 3px;
+    border-top: 1px solid #e2e2e2;
+}
+
 </style>
