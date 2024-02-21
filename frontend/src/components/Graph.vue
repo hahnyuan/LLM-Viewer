@@ -38,8 +38,8 @@ var all_node_info = {}
 const searchText = ref('')
 var searchResult = []
 
-var selectedNodeInfo = {}
-var selectedNodeId = ""
+var selectedNodeInfo = ref({"a":"b"})
+var selected_node_id = ""
 
 const changeGraphSizeWaitTimer = ref(false);
 window.onresize = () => {
@@ -61,6 +61,7 @@ function graphUpdate(is_fit_view = false, is_init = false) {
     axios.post(url, { model_id: model_id.value, hardware: hardware.value, inference_config: InferenceConfig.value }).then(function (response) {
         console.log(response);
         graph_data = response.data
+        all_node_info=graph_data.nodes
         if (is_init) {
             graph.changeData(graph_data)
         } else {
@@ -77,7 +78,7 @@ function graphUpdate(is_fit_view = false, is_init = false) {
         // graph.render();
         // graph.refresh()
         selectedNodeInfo.value = {}
-        selectedNodeId.value = ""
+        selected_node_id = ""
         nowFocusNode = null
         if (is_fit_view) {
             // graph.render();
@@ -124,7 +125,7 @@ function SelectNode(nodeId, moveView = false) {
         graph.focusItem(nodeId, true)
     }
     if (nowFocusNode) {
-        console.log("nowFocusNodePrevColor", nowFocusNodePrevColor)
+        // console.log("nowFocusNodePrevColor", nowFocusNodePrevColor)
         nowFocusNode.update({
             style: {
                 fill: nowFocusNodePrevColor,
@@ -146,31 +147,40 @@ function SelectNode(nodeId, moveView = false) {
         });
         nowFocusNode = node
     }
-    const url = 'http://' + ip_port + '/node_info'
-    axios.post(url, { node_id: nodeId }).then(function (response) {
-        console.log(response);
-        // 将返回回来的json数据转换成node_info
-        const nodeInfo = response.data
-        console.log(url, nodeInfo)
-        // 将nodeInfo传递给祖先组件
-        node.nodeInfo = nodeInfo
-        selectedNodeInfo.value = nodeInfo
-        selectedNodeId.value = nodeId
+    
+    // for (node_info in all_node_info) {
+    for (let node_info of Object.values(all_node_info)) {
+        console.log(node_info,nodeId)
+        if (node_info['id']==nodeId) {
+            
+            selectedNodeInfo.value = node_info["info"]
+        }
+    }
+    // selectedNodeInfo.value = all_node_info[nodeId]
+    // axios.post(url, { node_id: nodeId }).then(function (response) {
+    //     console.log(response);
+    //     // 将返回回来的json数据转换成node_info
+    //     const nodeInfo = response.data
+    //     console.log(url, nodeInfo)
+    //     // 将nodeInfo传递给祖先组件
+    //     node.nodeInfo = nodeInfo
+    //     selectedNodeInfo.value = nodeInfo
+    //     selectedNodeId.value = nodeId
 
-    })
-        .catch(function (error) {
-            console.log(error);
-            alert("失败", url)
-        });
+    // })
+    //     .catch(function (error) {
+    //         console.log(error);
+    //         alert("失败", url)
+    //     });
 }
 
 onMounted(() => {
     graph = new G6.Graph(graph_config);  // 创建.
-    // graph.on('node:click', (event) => {
-    //     const { item } = event;
-    //     const node = item.getModel();
-    //     clickNode(node);
-    // });
+    graph.on('node:click', (event) => {
+        const { item } = event;
+        const node = item.getModel();
+        clickNode(node);
+    });
     graphUpdate(true, true);
     graph.render();
 })

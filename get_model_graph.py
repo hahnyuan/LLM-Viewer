@@ -53,23 +53,16 @@ def get_model_graph(model_id, hardware, config_path, inference_config):
         {
             "label": "input",
             "id": "input",
-            "panels": [
-                {"title": "OPs", "value": "0"},
-                {"title": "Access", "value": "0"},
-            ],
         }
     ]
     edges = []
 
-    def write_to_node(name, OPs, memory_access, input_names=[]):
+    def write_to_node(name, OPs, memory_access, info, input_names=[]):
         node = {
             "label": name,
             "id": name,
             "description": f"OPs:{str_number(OPs)}, Access:{str_number(memory_access)}",
-            "panels": [
-                {"title": "OPs", "value": str_number(OPs)},
-                {"title": "Access", "value": str_number(memory_access)},
-            ],
+            "info": info,
         }
         nodes.append(node)
         for input_name in input_names:
@@ -80,8 +73,10 @@ def get_model_graph(model_id, hardware, config_path, inference_config):
         if name in ["input", "output"]:
             OPs = 0
             memory_access = 0
+            info={}
         else:
             OPs = result[name]["OPs"]
             memory_access = result[name]["memory_access"]
-        write_to_node(name, OPs, memory_access, input_names)
+            info=result[name]
+        write_to_node(name, OPs, memory_access, info, input_names)
     return nodes, edges
