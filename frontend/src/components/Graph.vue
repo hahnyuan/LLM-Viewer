@@ -25,17 +25,21 @@ import { watch, inject, ref } from 'vue'
 import { graph_config } from "./graphs/graph_config.js"
 import axios from 'axios'
 
+const model_id = inject('model_id')
+const hardware = inject('hardware')
+const graphUpdateTrigger = inject('graphUpdateTrigger')
+const InferenceConfig = inject('InferenceConfig')
+const ip_port = "127.0.0.1:5000"
+
 var graph = null;
 var graph_data;
-var settingsData = inject('settingsData')
-var selectedNodeInfo = inject('selectedNodeInfo')
-var selectedNodeId = inject('selectedNodeId')
-var graphUpdateTrigger = inject('graphUpdateTrigger')
-var InferenceConfig = inject('InferenceConfig')
-const model_id = inject('model_id')
+var all_node_info = {}
+
 const searchText = ref('')
 var searchResult = []
-const selectedNodeListRef = inject('selectedNodeListRef');  // 用于统计哪些元素被选择了.
+
+var selectedNodeInfo = {}
+var selectedNodeId = ""
 
 const changeGraphSizeWaitTimer = ref(false);
 window.onresize = () => {
@@ -52,15 +56,14 @@ window.onresize = () => {
 };
 
 function graphUpdate(is_fit_view = false, is_init = false) {
-    const ip_port = "127.0.0.1:5000"
-    console.log("graphUpdate", settingsData)
     const url = 'http://' + ip_port + '/get_graph'
-    axios.post(url, { model_id: model_id.value, inference_config: InferenceConfig.value }).then(function (response) {
+    console.log("graphUpdate", url)
+    axios.post(url, { model_id: model_id.value, hardware: hardware.value, inference_config: InferenceConfig.value }).then(function (response) {
         console.log(response);
         graph_data = response.data
         if (is_init) {
             graph.changeData(graph_data)
-        }else{
+        } else {
             // iterate each node
             graph_data.nodes.forEach(function (node) {
                 // update the node
@@ -117,52 +120,48 @@ watch(searchText, handleSearch)
 var nowFocusNode = null
 var nowFocusNodePrevColor = null
 function SelectNode(nodeId, moveView = false) {
-    // 移动画面到选中节点
     if (moveView) {
         graph.focusItem(nodeId, true)
     }
     if (nowFocusNode) {
-        // 取消高亮
         console.log("nowFocusNodePrevColor", nowFocusNodePrevColor)
         nowFocusNode.update({
             style: {
-                stroke: nowFocusNodePrevColor,
+                fill: nowFocusNodePrevColor,
             },
         });
     }
     const node = graph.findById(nodeId)
     if (node) {
         // 高亮
-        if (node.getModel().style.stroke) {
-            nowFocusNodePrevColor = node.getModel().style.stroke
+        if (node.getModel().style.fill) {
+            nowFocusNodePrevColor = node.getModel().style.fill
         } else {
-            nowFocusNodePrevColor = "#5B8FF9"
+            nowFocusNodePrevColor = "#ffffff"
         }
         node.update({
             style: {
-                stroke: 'red',
+                fill: "#dffdff",
             },
         });
         nowFocusNode = node
     }
-    // POST请求 http://{ip_port}/{phase}_node_info 获取nodeId的详细信息
-    const ip_port = settingsData.value.ip_port
-    const url = 'http://' + ip_port + '/' + model_id.value + '_node_info'
-    // axios.post(url, { node_id: nodeId }).then(function (response) {
-    //     console.log(response);
-    //     // 将返回回来的json数据转换成node_info
-    //     const nodeInfo = response.data
-    //     console.log(url, nodeInfo)
-    //     // 将nodeInfo传递给祖先组件
-    //     node.nodeInfo = nodeInfo
-    //     selectedNodeInfo.value = nodeInfo
-    //     selectedNodeId.value = nodeId
+    const url = 'http://' + ip_port + '/node_info'
+    axios.post(url, { node_id: nodeId }).then(function (response) {
+        console.log(response);
+        // 将返回回来的json数据转换成node_info
+        const nodeInfo = response.data
+        console.log(url, nodeInfo)
+        // 将nodeInfo传递给祖先组件
+        node.nodeInfo = nodeInfo
+        selectedNodeInfo.value = nodeInfo
+        selectedNodeId.value = nodeId
 
-    // })
-    //     .catch(function (error) {
-    //         console.log(error);
-    //         alert("失败", url)
-    //     });
+    })
+        .catch(function (error) {
+            console.log(error);
+            alert("失败", url)
+        });
 }
 
 onMounted(() => {

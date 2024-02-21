@@ -1,6 +1,5 @@
 <template>
     <h2>Inference Config</h2>
-    <!-- radio，可选 decode prefill 默认decode-->
     <div>
         Stage:
         <input type="radio" v-model="inference_stage" id="decode" value="decode" checked>
@@ -11,12 +10,12 @@
     <div class="slider">
         Batchsize:
         <input type="range" min="1" max="256" value="1" v-model.lazy="batch_size" oninput="batch_size.innerText = this.value">
-        <p id="batch_size">1</p>
+        <span id="batch_size">1</span>
     </div>
     <div class="slider">
         Seqence Length:
         <input type="range" min="1" max="4096" value="1024" v-model.lazy="seq_length" oninput="seq_length.innerText = this.value">
-        <p id="seq_length">1024</p>
+        <span id="seq_length">1024</span>
     </div>
     <!-- <div class="slider">
         Generation Length:
@@ -63,9 +62,6 @@
 <script setup>
 import { inject, ref, watch, computed } from 'vue';
 
-const ip_port = inject('settingsData').value.ip_port
-const serverStatus = inject('serverStatus');
-const selectedNodeInfo = inject('selectedNodeInfo');
 const graphUpdateTrigger = inject('graphUpdateTrigger');
 
 
@@ -73,7 +69,7 @@ const InferenceConfig = inject('InferenceConfig');
 
 const inference_stage = ref('');
 const batch_size = ref(1);
-const seq_length = ref(1);
+const seq_length = ref(1024);
 const w_quant = ref('FP16');
 const a_quant = ref('FP16');
 const kv_quant = ref('FP16');

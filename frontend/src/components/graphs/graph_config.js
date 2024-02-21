@@ -147,7 +147,7 @@ export const graph_config = {
         type: 'modelRect',
         // type: 'rect',
         // hight: 200,
-        size: [180, 60], // 设置节点的默认宽度和高度
+        size: [190, 60], // 设置节点的默认宽度和高度
         anchorPoints: [
             [0.5, 0],
             [0.5, 1]

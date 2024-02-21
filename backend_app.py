@@ -15,9 +15,13 @@ def index():
 def get_graph():
     inference_config=request.json["inference_config"]
     nodes, edges = get_model_graph(
-        request.json["model_id"],"nvidia_V100",None,inference_config, 
+        request.json["model_id"],request.json["hardware"],None,inference_config, 
     )
     return {"nodes": nodes, "edges": edges}
+
+@app.route("/node_info",methods=["POST"])
+def node_info():
+    pass
 
 if __name__ == "__main__":
     app.run(debug=True)

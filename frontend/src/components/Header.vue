@@ -1,11 +1,20 @@
 <template>
     <div class="title">LLMViewer v0.1</div>
     <div class="header_button">
-        | Model:
-        <select v-model="selectedOption" @change="handleSelection" >
+        | 
+        <span>Model: </span>
+        <select v-model="select_model_id">
             <option value="meta-llama/Llama-2-7b-hf">meta-llama/Llama-2-7b-hf</option>
             <option value="meta-llama/Llama-2-13b-hf">meta-llama/Llama-2-13b-hf</option>
             <option value="meta-llama/Llama-2-70b-hf">meta-llama/Llama-2-70b-hf</option>
+            <!-- <option value="ChatGLM">ChatGLM</option> -->
+        </select>
+        <span> | </span>
+        <span>Hardware: </span>
+        <select v-model="select_hardware">
+            <option value="nvidia_V100">nvidia_V100</option>
+            <option value="nvidia_A100">nvidia_A100</option>
+            <option value="nvidia_H100">nvidia_H100</option>
             <!-- <option value="ChatGLM">ChatGLM</option> -->
         </select>
     </div>
@@ -14,16 +23,22 @@
 <script setup>
 import { inject, ref, watch, computed } from 'vue';
 const model_id = inject('model_id');
+const hardware = inject('hardware');
 const graphUpdateTrigger = inject('graphUpdateTrigger');
 
-var selectedOption = ref('meta-llama/Llama-2-7b-hf');
-
-function handleSelection() {
-    console.log("handleSelection", selectedOption.value)
-    model_id.value = selectedOption.value
+var select_model_id = ref('meta-llama/Llama-2-7b-hf');
+watch(select_model_id, (n) => {
+    console.log("select_model_id", n)
+    model_id.value = n
     graphUpdateTrigger.value += 1
+})
 
-}
+var select_hardware = ref('nvidia_V100');
+watch(select_hardware, (n) => {
+    console.log("select_hardware", n)
+    hardware.value = n
+    graphUpdateTrigger.value += 1
+})
 
 
 </script>

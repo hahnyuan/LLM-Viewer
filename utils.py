@@ -1,11 +1,19 @@
 
 def str_number(num):
-    if num > 1e12:
+    if num > 1e14:
+        return f"{num/1e12:.0f}T"
+    elif num > 1e12:
         return f"{num/1e12:.1f}T"
+    elif num>1e11:
+        return f"{num/1e9:.0f}G"
     elif num > 1e9:
         return f"{num/1e9:.1f}G"
+    elif num > 1e8:
+        return f"{num/1e6:.0f}M"
     elif num > 1e6:
         return f"{num/1e6:.1f}M"
+    elif num > 1e5:
+        return f"{num/1e3:.0f}K"
     elif num > 1e3:
         return f"{num/1e3:.1f}K"
     elif num >= 1:
