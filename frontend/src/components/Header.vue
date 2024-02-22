@@ -20,6 +20,10 @@
             <!-- <option value="ChatGLM">ChatGLM</option> -->
         </select>
     </div>
+    <div>
+        <span> | </span>
+        Document
+    </div>
 </template>
 
 <script setup>

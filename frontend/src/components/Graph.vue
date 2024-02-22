@@ -19,7 +19,7 @@
                 <span v-else-if="['time_cost'].includes(key)">{{ key }}: {{ strNumberTime(value) }}</span>
                 <span v-else>{{ key }}: {{ strNumber(value) }}</span>
             </div>
-            <div v-if="selected_node_id" class="float-node-info-item">
+            <div class="float-node-info-item">
                 <canvas id="lineChart" width="300" height="200"></canvas>
             </div>
         </div>
@@ -100,6 +100,7 @@ function graphUpdate(is_fit_view = false, is_init = false) {
             setTimeout(() => {
                 graph.fitView();
             }, 10);
+            update_roofline_model()
         }
 
     })
@@ -178,22 +179,34 @@ function update_roofline_model() {
         const max_OPS = hardware_info["max_OPS"];
         const turningPoint = max_OPS / bandwidth;
 
-        const node_arithmetic_intensity = all_node_info.value[selected_node_id.value]["arithmetic_intensity"];
-        // 计算x_max，max(turningPoint * 3, node_arithmetic_intensity)
-        const x_max = Math.max(turningPoint * 3, node_arithmetic_intensity);
-        // const x_max = 100;
-
-        // var data = {
-        //     // labels: [0, 1, 10],
-        //     datasets: [{
-        //         label: '数据',
-        //         data: [2, 3, 5],
-        //         backgroundColor: 'rgba(0, 123, 255, 0.5)', // 设置数据点的背景颜色
-        //         borderColor: 'rgba(0, 123, 255, 1)', // 设置线的颜色
-        //         borderWidth: 1 // 设置线的宽度
-        //     }]
-        //     };
-
+        var annotation
+        var x_max
+        if (selected_node_id.value){
+            const node_arithmetic_intensity = all_node_info.value[selected_node_id.value]["arithmetic_intensity"];
+            x_max = Math.max(turningPoint * 3, node_arithmetic_intensity+1);
+            annotation={
+                        annotations: {
+                            lineX: {
+                                type: 'line',
+                                xMin: node_arithmetic_intensity,
+                                xMax: node_arithmetic_intensity,
+                                yMin: 0,
+                                yMax: max_OPS * 1.1,
+                                borderColor: 'blue',
+                                borderWidth: 2,
+                                borderDash: [5, 5], // 虚线样式
+                                label: {
+                                    enabled: true,
+                                    content: 'Node AI',
+                                    position: 'top'
+                                }
+                            }
+                        }
+                    }
+        }else{
+            annotation={}
+            x_max = turningPoint * 3
+        }
         roofline_chart = new Chart(ctx, {
             type: 'line',
             data:
@@ -255,25 +268,7 @@ function update_roofline_model() {
                     legend: {
                         display: false
                     },
-                    annotation: {
-                        annotations: {
-                            lineX: {
-                                type: 'line',
-                                xMin: node_arithmetic_intensity,
-                                xMax: node_arithmetic_intensity,
-                                yMin: 0,
-                                yMax: max_OPS * 1.1,
-                                borderColor: 'blue',
-                                borderWidth: 2,
-                                borderDash: [5, 5], // 虚线样式
-                                label: {
-                                    enabled: true,
-                                    content: 'Node AI',
-                                    position: 'top'
-                                }
-                            }
-                        }
-                    }
+                    annotation: annotation
                 }
             }
         });
@@ -281,18 +276,20 @@ function update_roofline_model() {
 }
 
 onMounted(() => {
-    graph = new G6.Graph(graph_config);  // 创建.
+    graph = new G6.Graph(graph_config); 
     graph.on('node:click', (event) => {
         const { item } = event;
         const node = item.getModel();
         clickNode(node);
     });
-    // 空的地方点击的
     graph.on('canvas:click', (event) => {
         selected_node_id.value = ""
+        update_roofline_model()
     });
     graphUpdate(true, true);
     graph.render();
+    
+    
 })
 
 function clickNode(node) {
