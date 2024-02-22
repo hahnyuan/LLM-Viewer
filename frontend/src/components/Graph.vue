@@ -11,13 +11,16 @@
             </div>
         </div>
         <div class="float-node-info-window">
-            <div v-if="selected_node_id">
+            <div v-if="selected_node_id" class="float-node-info-item">
                 <strong>{{ selected_node_id }}</strong>
             </div>
             <div v-for="(value, key) in all_node_info[selected_node_id]" :key="key" class="float-node-info-item">
-                <p v-if="['OPs','memory_access','load_act','store_act'].includes(key)">{{ key }}: {{ numeral(value).format('0.0a') }}</p>
+                <span v-if="['bound'].includes(key)">{{ key }}: {{ value }}</span>
+                <span v-else-if="['time_cost'].includes(key)">{{ key }}: {{ strNumberTime(value) }}</span>
+                <!-- <span v-else>{{ key }}: {{ numeral(value).format('0.0a') }}</span> -->
+                <span v-else>{{ key }}: {{ strNumber(value) }}</span>
                 <!-- <p v-if="['OPs','memory_access','load_act'].includes(key)">{{ key }}: {{ numeral(value).format('0.0a') }}</p> -->
-                {{ key }}: <br />{{ value }}
+                <!-- {{ key }}: <br />{{ value }} -->
             </div>
         </div>
     </div>
@@ -29,7 +32,7 @@ import { onMounted, onBeforeUpdate, provide } from 'vue'
 import { watch, inject, ref } from 'vue'
 import { graph_config } from "./graphs/graph_config.js"
 import axios from 'axios'
-import numeral from 'numeral';
+import { strNumber,strNumberTime } from '@/utils.js';
 
 const model_id = inject('model_id')
 const hardware = inject('hardware')
@@ -46,6 +49,8 @@ const searchText = ref('')
 var searchResult = []
 
 const selected_node_id = ref("")
+
+
 
 const changeGraphSizeWaitTimer = ref(false);
 window.onresize = () => {
@@ -166,6 +171,10 @@ onMounted(() => {
         const { item } = event;
         const node = item.getModel();
         clickNode(node);
+    });
+    // 空的地方点击的
+    graph.on('canvas:click', (event) => {
+        selected_node_id.value = ""
     });
     graphUpdate(true, true);
     graph.render();

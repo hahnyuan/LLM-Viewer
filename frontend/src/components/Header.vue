@@ -1,5 +1,7 @@
 <template>
-    <div class="title">LLMViewer v0.1</div>
+    <div class="title">
+        <!-- <img :src="publicPath + '/favicon.ico'" alt="Header Image"> -->
+        LLM-Viewer v0.2</div>
     <div class="header_button">
         | 
         <span>Model: </span>

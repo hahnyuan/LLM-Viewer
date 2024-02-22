@@ -64,21 +64,25 @@
     <div v-if="inference_stage=='decode'">
         <h3>Decode</h3>
         <div v-for="(value, key) in total_results['decode']" :key="key" class="network-wise-info-item">
-            {{ key }}: <br />{{ numeral(value).format('0.0a') }}
+            <span v-if="['bound'].includes(key)">{{ key }}: {{ value }}</span>
+            <span v-else-if="['time_cost'].includes(key)">{{ key }}: {{ strNumberTime(value) }}</span>
+            <span v-else>{{ key }}: {{ strNumber(value) }}</span>
         </div>
         
     </div>
     <div v-if="inference_stage=='prefill'">
         <h3>Prefill</h3>
         <div v-for="(value, key) in total_results['prefill']" :key="key" class="network-wise-info-item">
-            {{ key }}: <br />{{ numeral(value).format('0.0a') }}
+            <span v-if="['bound'].includes(key)">{{ key }}: {{ value }}</span>
+            <span v-else-if="['time_cost'].includes(key)">{{ key }}: {{ strNumberTime(value) }}</span>
+            <span v-else>{{ key }}: {{ strNumber(value) }}</span>
         </div>
     </div>
 </template>
 
 <script setup>
 import { inject, ref, watch, computed } from 'vue';
-import numeral from 'numeral';
+import { strNumber,strNumberTime } from '@/utils.js';
 
 const graphUpdateTrigger = inject('graphUpdateTrigger');
 
