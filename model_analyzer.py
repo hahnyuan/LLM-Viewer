@@ -57,12 +57,8 @@ class ModelAnalyzer:
         load_kv_cache,
         store_kv_cache,
     ):
-        bandwidth = hardware_params[self.hardware]["bandwith"]
-        if self.w_bit <= 8 and self.a_bit <= 8 and self.kv_bit <= 8:
-            max_OPS = hardware_params[self.hardware]["INT8"]
-        else:
-            max_OPS = hardware_params[self.hardware]["FP16"]
-
+        
+        bandwidth, max_OPS=self.get_hardware_info()
         memory_access = (
             load_weight + load_act + store_act + load_kv_cache + store_kv_cache
         )
@@ -385,3 +381,11 @@ class ModelAnalyzer:
             result = self.analyze(i, batchsize, w_bit, a_bit, kv_bit)
             time_cost=result["total_results"]["decode"]["time_cost"]
         return {"time_cost":time_cost}
+
+    def get_hardware_info(self):
+        bandwidth = hardware_params[self.hardware]["bandwith"]
+        if self.w_bit <= 8 and self.a_bit <= 8 and self.kv_bit <= 8:
+            max_OPS = hardware_params[self.hardware]["INT8"]
+        else:
+            max_OPS = hardware_params[self.hardware]["FP16"]
+        return bandwidth, max_OPS

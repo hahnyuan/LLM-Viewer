@@ -49,6 +49,11 @@ def get_model_graph(model_id, hardware, config_path, inference_config):
     stage = inference_config["stage"]
     total_results= result["total_results"]
     result = result[stage]
+    bandwidth, max_OPS=analyzer.get_hardware_info()
+    hardware_info={
+        "bandwidth":bandwidth,
+        "max_OPS":max_OPS
+    }
 
     nodes = [
         {
@@ -81,4 +86,4 @@ def get_model_graph(model_id, hardware, config_path, inference_config):
             info=result[name]
         write_to_node(name, OPs, memory_access, info, input_names)
     
-    return nodes, edges, total_results
+    return nodes, edges, total_results,hardware_info

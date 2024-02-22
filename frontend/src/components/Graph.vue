@@ -17,10 +17,10 @@
             <div v-for="(value, key) in all_node_info[selected_node_id]" :key="key" class="float-node-info-item">
                 <span v-if="['bound'].includes(key)">{{ key }}: {{ value }}</span>
                 <span v-else-if="['time_cost'].includes(key)">{{ key }}: {{ strNumberTime(value) }}</span>
-                <!-- <span v-else>{{ key }}: {{ numeral(value).format('0.0a') }}</span> -->
                 <span v-else>{{ key }}: {{ strNumber(value) }}</span>
-                <!-- <p v-if="['OPs','memory_access','load_act'].includes(key)">{{ key }}: {{ numeral(value).format('0.0a') }}</p> -->
-                <!-- {{ key }}: <br />{{ value }} -->
+            </div>
+            <div v-if="selected_node_id" class="float-node-info-item">
+                <canvas id="lineChart" width="300" height="200"></canvas>
             </div>
         </div>
     </div>
@@ -31,8 +31,11 @@ import G6 from "@antv/g6"
 import { onMounted, onBeforeUpdate, provide } from 'vue'
 import { watch, inject, ref } from 'vue'
 import { graph_config } from "./graphs/graph_config.js"
+// import { get_roofline_options } from "./graphs/roofline_config.js"
 import axios from 'axios'
-import { strNumber,strNumberTime } from '@/utils.js';
+import { strNumber, strNumberTime } from '@/utils.js';
+import { Chart, registerables } from 'chart.js';
+import annotationPlugin from 'chartjs-plugin-annotation';
 
 const model_id = inject('model_id')
 const hardware = inject('hardware')
@@ -40,15 +43,18 @@ const graphUpdateTrigger = inject('graphUpdateTrigger')
 const InferenceConfig = inject('InferenceConfig')
 const ip_port = "127.0.0.1:5000"
 const total_results = inject('total_results')
+var hardware_info = {}
 
 var graph = null;
 var graph_data;
 const all_node_info = ref({})
+Chart.register(...registerables, annotationPlugin);
 
 const searchText = ref('')
 var searchResult = []
 
 const selected_node_id = ref("")
+var roofline_chart = null
 
 
 
@@ -75,7 +81,8 @@ function graphUpdate(is_fit_view = false, is_init = false) {
         for (let i = 0; i < graph_data.nodes.length; i++) {
             all_node_info.value[graph_data.nodes[i].id] = graph_data.nodes[i].info;
         }
-        total_results.value= response.data.total_results
+        total_results.value = response.data.total_results
+        hardware_info = response.data.hardware_info
         if (is_init) {
             graph.changeData(graph_data)
         } else {
@@ -89,13 +96,7 @@ function graphUpdate(is_fit_view = false, is_init = false) {
 
         }
         console.log(graph_data)
-        // graph.render();
-        // graph.refresh()
-        // selectedNodeInfo.value = {}
-        // selected_node_id = ""
-        // nowFocusNode = null
         if (is_fit_view) {
-            // graph.render();
             setTimeout(() => {
                 graph.fitView();
             }, 10);
@@ -110,6 +111,7 @@ function graphUpdate(is_fit_view = false, is_init = false) {
 }
 
 watch(() => graphUpdateTrigger.value, () => graphUpdate(false))
+watch(() => graphUpdateTrigger.value, () => update_roofline_model())
 
 function handleSearch(newText, oldText) {
     console.log("handleSearch", newText)
@@ -161,8 +163,121 @@ function SelectNode(nodeId, moveView = false) {
         });
         nowFocusNode = node
     }
-    
-    selected_node_id.value= nodeId
+
+    selected_node_id.value = nodeId
+}
+
+
+function update_roofline_model() {
+    const ctx = document.getElementById('lineChart');
+    if (ctx) {
+        if (roofline_chart) {
+            roofline_chart.destroy();
+        }
+        const bandwidth = hardware_info["bandwidth"];
+        const max_OPS = hardware_info["max_OPS"];
+        const turningPoint = max_OPS / bandwidth;
+
+        const node_arithmetic_intensity = all_node_info.value[selected_node_id.value]["arithmetic_intensity"];
+        // 计算x_max，max(turningPoint * 3, node_arithmetic_intensity)
+        const x_max = Math.max(turningPoint * 3, node_arithmetic_intensity);
+        // const x_max = 100;
+
+        // var data = {
+        //     // labels: [0, 1, 10],
+        //     datasets: [{
+        //         label: '数据',
+        //         data: [2, 3, 5],
+        //         backgroundColor: 'rgba(0, 123, 255, 0.5)', // 设置数据点的背景颜色
+        //         borderColor: 'rgba(0, 123, 255, 1)', // 设置线的颜色
+        //         borderWidth: 1 // 设置线的宽度
+        //     }]
+        //     };
+
+        roofline_chart = new Chart(ctx, {
+            type: 'line',
+            data:
+            {
+                // labels: [0, turningPoint, 321],
+                datasets: [{
+                    label: 'Roofline',
+                    data: [
+                        { x: 0, y: 0 },
+                        { x: turningPoint, y: max_OPS },
+                        { x: x_max, y: max_OPS }
+                    ],
+                    // [0, max_OPS, max_OPS],
+                    borderColor: 'black',
+                    borderWidth: 2,
+                    fill: false,
+                    pointRadius: 0 // 不显示数据点
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Arithmetic Intensity (OPs/byte)'
+                        },
+                        type: 'linear',
+                        ticks: {
+                            callback: function (value, index, values) {
+                                return value.toFixed(1);
+                            }
+                        },
+                        beginAtZero: true,
+                        max: x_max
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Performance (OPS)'
+                        },
+                        ticks: {
+                            callback: function (value, index, values) {
+                                return value.toExponential(1);
+                            }
+                        },
+                        beginAtZero: true,
+                        max: max_OPS * 1.1
+                    }
+                },
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Roofline Model', // 这里是你想要的标题
+                        position: 'top' // 标题的位置，可以是'top', 'left', 'bottom', 或 'right'
+                    },
+                    legend: {
+                        display: false
+                    },
+                    annotation: {
+                        annotations: {
+                            lineX: {
+                                type: 'line',
+                                xMin: node_arithmetic_intensity,
+                                xMax: node_arithmetic_intensity,
+                                yMin: 0,
+                                yMax: max_OPS * 1.1,
+                                borderColor: 'blue',
+                                borderWidth: 2,
+                                borderDash: [5, 5], // 虚线样式
+                                label: {
+                                    enabled: true,
+                                    content: 'Node AI',
+                                    position: 'top'
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
 }
 
 onMounted(() => {
@@ -183,7 +298,11 @@ onMounted(() => {
 function clickNode(node) {
     console.log(node);
     const nodeId = node.id;
-    SelectNode(nodeId)
+    SelectNode(nodeId);
+    // sleep 100ms
+    setTimeout(() => {
+        update_roofline_model();
+    }, 100);
 }
 </script>
 
@@ -225,5 +344,4 @@ function clickNode(node) {
     padding: 3px;
     border-top: 1px solid #e2e2e2;
 }
-
 </style>

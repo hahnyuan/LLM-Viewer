@@ -9,15 +9,14 @@
     </div>
     <div class="slider">
         Batchsize:
-        <input type="range" min="1" max="256" value="1" v-model.lazy="batch_size"
-            oninput="batch_size.innerText = this.value">
-        <span id="batch_size">1</span>
+        <input type="range" min="1" max="256" value="1" v-model.lazy="batch_size">
+        <input type="number" v-model.lazy="batch_size" min="1" max="256">
     </div>
     <div class="slider">
-        Seqence Length:
-        <input type="range" min="1" max="100000" value="1024" v-model.lazy="seq_length"
-            oninput="seq_length.innerText = this.value">
-        <span id="seq_length">1024</span>
+        SeqLength:
+        <input type="range" min="1" max="4096" value="1024" v-model.lazy="seq_length">
+        <!-- <span id="seq_length">1024</span> -->
+        <input type="number" v-model.lazy="seq_length" min="1" max="4096">
     </div>
     <!-- <div class="slider">
         Generation Length:
