@@ -15,7 +15,7 @@
     </div>
     <div class="slider">
         Seqence Length:
-        <input type="range" min="1" max="4096" value="1024" v-model.lazy="seq_length"
+        <input type="range" min="1" max="100000" value="1024" v-model.lazy="seq_length"
             oninput="seq_length.innerText = this.value">
         <span id="seq_length">1024</span>
     </div>
@@ -64,20 +64,21 @@
     <div v-if="inference_stage=='decode'">
         <h3>Decode</h3>
         <div v-for="(value, key) in total_results['decode']" :key="key" class="network-wise-info-item">
-            {{ key }}: <br />{{ value }}
+            {{ key }}: <br />{{ numeral(value).format('0.0a') }}
         </div>
         
     </div>
     <div v-if="inference_stage=='prefill'">
         <h3>Prefill</h3>
         <div v-for="(value, key) in total_results['prefill']" :key="key" class="network-wise-info-item">
-            {{ key }}: <br />{{ value }}
+            {{ key }}: <br />{{ numeral(value).format('0.0a') }}
         </div>
     </div>
 </template>
 
 <script setup>
 import { inject, ref, watch, computed } from 'vue';
+import numeral from 'numeral';
 
 const graphUpdateTrigger = inject('graphUpdateTrigger');
 

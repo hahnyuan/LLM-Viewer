@@ -15,6 +15,8 @@
                 <strong>{{ selected_node_id }}</strong>
             </div>
             <div v-for="(value, key) in all_node_info[selected_node_id]" :key="key" class="float-node-info-item">
+                <p v-if="['OPs','memory_access','load_act','store_act'].includes(key)">{{ key }}: {{ numeral(value).format('0.0a') }}</p>
+                <!-- <p v-if="['OPs','memory_access','load_act'].includes(key)">{{ key }}: {{ numeral(value).format('0.0a') }}</p> -->
                 {{ key }}: <br />{{ value }}
             </div>
         </div>
@@ -27,6 +29,7 @@ import { onMounted, onBeforeUpdate, provide } from 'vue'
 import { watch, inject, ref } from 'vue'
 import { graph_config } from "./graphs/graph_config.js"
 import axios from 'axios'
+import numeral from 'numeral';
 
 const model_id = inject('model_id')
 const hardware = inject('hardware')

@@ -1,5 +1,8 @@
 # LLM-Viewer
 
+<img src="figs/eye.png" alt="LLM-Viewer" width="50"/>
+
+
 LLM-Viewer is a powerful tool for visualizing Language and Learning Models (LLMs) and analyzing the performance on different hardware platforms. It enables network-wise analysis, considering factors such as peak memory consumption and total inference time cost. With LLM-Viewer, you can gain valuable insights into LLM inference and performance optimization.
 
 
