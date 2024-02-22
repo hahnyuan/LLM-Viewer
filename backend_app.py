@@ -2,7 +2,7 @@ from flask import Flask, request
 from flask import render_template
 from flask_cors import CORS
 from get_model_graph import get_model_graph
-from backend_settings import avaliable_hardwares,avaliable_models
+from backend_settings import avaliable_hardwares,avaliable_model_ids
 import argparse
 
 app = Flask(__name__)
@@ -34,7 +34,7 @@ def get_graph():
 def get_avaliable():
     return {
         "avaliable_hardwares": avaliable_hardwares,
-        "avaliable_models": avaliable_models,
+        "avaliable_model_ids": avaliable_model_ids,
     }
 
 if __name__ == "__main__":

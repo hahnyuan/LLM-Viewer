@@ -8,7 +8,7 @@ const model_id = ref("meta-llama/Llama-2-7b-hf");
 const hardware = ref("nvidia_V100");
 const graphUpdateTrigger = ref(1);
 const total_results = ref({});
-const ip_port=ref("api.wildz.cn:5000");
+const ip_port=ref("api.llm-viewer.com:5000");
 
 provide("model_id", model_id);
 provide("hardware", hardware);
