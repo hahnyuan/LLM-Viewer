@@ -1,7 +1,7 @@
 <template>
     <div class="title">
         <!-- <img :src="publicPath + '/favicon.ico'" alt="Header Image"> -->
-        LLM-Viewer v0.2</div>
+        LLM-Viewer v0.3</div>
     <div class="header_button">
         | 
         <span>Model: </span>
@@ -25,7 +25,8 @@
     
     <div>
         <span> | </span>
-        Document
+        <a href="https://github.com/hahnyuan/LLM-Viewer" target="_blank"> Document </a>
+        <!-- Document -->
     </div>
     <div>
         <span> | </span>

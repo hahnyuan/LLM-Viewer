@@ -4,6 +4,7 @@
 
 
 LLM-Viewer is a powerful tool for visualizing Language and Learning Models (LLMs) and analyzing the performance on different hardware platforms. It enables network-wise analysis, considering factors such as peak memory consumption and total inference time cost. With LLM-Viewer, you can gain valuable insights into LLM inference and performance optimization.
+You can use LLM-Viewer in a web browser or as a command line interface (CLI) tool. The web version provides a user-friendly interface for easy configuration and visualization, you can access it at [LLM-Viewer Web](http://llm-viewer.com).
 
 
 ## Workflow
@@ -20,8 +21,11 @@ As shown in the Figure, the workflow consists of the following steps:
 6. Generate a report that provides information such as the maximum performance and performance bottlenecks of each layer and the network, as well as the memory footprint. The report can be used to analyze curves, such as batch size-performance and sequence length-performance curves, to understand how different settings impact performance.
 7. Access the LLM-Viewer web viewer for convenient visualization of the network architecture and analysis results. This tool facilitates easy configuration adjustment and provides access to various data for each layer.
 
+## Web Usage
 
-## Usage
+To use LLM-Viewer in a web browser, go to the web-site [LLM-Viewer Web](http://llm-viewer.com).
+
+## CLI Usage
 
 Clone the LLM-Viewer repository from GitHub: 
 ```git clone https://github.com/hahnyuan/LLM-Viewer.git   ```

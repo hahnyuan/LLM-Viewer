@@ -113,6 +113,7 @@ function graphUpdate(is_fit_view = false, is_init = false) {
 
 watch(() => graphUpdateTrigger.value, () => graphUpdate(false))
 watch(() => graphUpdateTrigger.value, () => update_roofline_model())
+watch(() => graphUpdateTrigger.value, () => release_select())
 
 function handleSearch(newText, oldText) {
     console.log("handleSearch", newText)
@@ -275,6 +276,11 @@ function update_roofline_model() {
     }
 }
 
+function release_select(){
+    selected_node_id.value = ""
+    update_roofline_model()
+}
+
 onMounted(() => {
     graph = new G6.Graph(graph_config); 
     graph.on('node:click', (event) => {
@@ -283,8 +289,7 @@ onMounted(() => {
         clickNode(node);
     });
     graph.on('canvas:click', (event) => {
-        selected_node_id.value = ""
-        update_roofline_model()
+        release_select()
     });
     graphUpdate(true, true);
     graph.render();
