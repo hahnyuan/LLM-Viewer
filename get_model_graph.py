@@ -80,4 +80,5 @@ def get_model_graph(model_id, hardware, config_path, inference_config):
             memory_access = result[name]["memory_access"]
             info=result[name]
         write_to_node(name, OPs, memory_access, info, input_names)
+    
     return nodes, edges, total_results

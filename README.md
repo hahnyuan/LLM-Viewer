@@ -5,7 +5,7 @@ LLM-Viewer is a powerful tool for visualizing Language and Learning Models (LLMs
 
 ## Workflow
 
-![LLM-Viewer Workflow](figs/workflow.png)
+![LLM-Viewer Workflow](figs/workflow.svg)
 
 As shown in the Figure, the workflow consists of the following steps:
 
