@@ -24,7 +24,10 @@ As shown in the Figure, the workflow consists of the following steps:
 ## Usage
 
 Clone the LLM-Viewer repository from GitHub: 
-```bash   git clone https://github.com/hahnyuan/LLM-Viewer.git   ```
+```git clone https://github.com/hahnyuan/LLM-Viewer.git   ```
+
+Install requirements
+```pip install transformers flask ```
 
 To analyze an LLM using LLM-Viewer in command line interface (cli), run the following command:
 

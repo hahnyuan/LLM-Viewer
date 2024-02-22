@@ -21,16 +21,41 @@
         </select>
     </div>
     <div>
+        <span @click="showInput = true" v-if="!showInput"> setting </span>
+        <input v-if="showInput" v-model="ip_port" @blur="showInput = false" />
+    </div>
+    <div>
         <span> | </span>
         Document
     </div>
 </template>
 
 <script setup>
-import { inject, ref, watch, computed } from 'vue';
+import { inject, ref, watch, computed, onMounted } from 'vue';
+import axios from 'axios'
 const model_id = inject('model_id');
 const hardware = inject('hardware');
 const graphUpdateTrigger = inject('graphUpdateTrigger');
+const ip_port = inject('ip_port');
+
+const avaliable_hardwares = ref([]);
+const avaliable_model_ids=ref([]);
+const showInput=ref(false);
+
+onMounted(() => {
+    console.log("Header mounted")
+    const url = 'http://' + ip_port.value + '/get_avaliable'
+    axios.get(url).then(function (response) {
+        console.log(response);
+        avaliable_hardwares.value = response.data.avaliable_hardwares
+        avaliable_model_ids.value = response.data.avaliable_model_ids
+    })
+        .catch(function (error) {
+            console.log("error in get_avaliable");
+            console.log(error);
+        });
+
+})
 
 var select_model_id = ref('meta-llama/Llama-2-7b-hf');
 watch(select_model_id, (n) => {

@@ -41,7 +41,7 @@ const model_id = inject('model_id')
 const hardware = inject('hardware')
 const graphUpdateTrigger = inject('graphUpdateTrigger')
 const InferenceConfig = inject('InferenceConfig')
-const ip_port = "127.0.0.1:5000"
+const ip_port = inject('ip_port')
 const total_results = inject('total_results')
 var hardware_info = {}
 
@@ -73,7 +73,7 @@ window.onresize = () => {
 };
 
 function graphUpdate(is_fit_view = false, is_init = false) {
-    const url = 'http://' + ip_port + '/get_graph'
+    const url = 'http://' + ip_port.value + '/get_graph'
     console.log("graphUpdate", url)
     axios.post(url, { model_id: model_id.value, hardware: hardware.value, inference_config: InferenceConfig.value }).then(function (response) {
         console.log(response);

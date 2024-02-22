@@ -6,14 +6,21 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d dist"
   },
   "dependencies": {
     "@antv/g6": "^4.8.23",
     "@vitejs/plugin-vue": "^5.0.3",
     "axios": "^1.6.7",
+    "chart.js": "^4.4.1",
+    "chartjs-plugin-annotation": "^3.0.1",
     "numeral": "^2.0.6",
     "vite": "^5.0.12",
     "vue": "^3.4.15"
+  },
+  "devDependencies": {
+    "gh-pages": "^6.1.1"
   }
 }
