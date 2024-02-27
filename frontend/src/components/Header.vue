@@ -1,7 +1,7 @@
 <template>
     <div class="title">
         <!-- <img :src="publicPath + '/favicon.ico'" alt="Header Image"> -->
-        LLM-Viewer v0.3</div>
+        LLM-Viewer v{{ version }}</div>
     <div class="header_button">
         | 
         <span>Model: </span>
@@ -22,19 +22,19 @@
             <option v-for="hardware in avaliable_hardwares" :value="hardware">{{hardware}}</option>
         </select>
     </div>
-    
     <div>
         <span> | </span>
-        <a href="https://github.com/hahnyuan/LLM-Viewer" target="_blank"> Document </a>
-        <!-- Document -->
-    </div>
-    <div>
-        <span> | </span>
-        <!-- <span @click="show_server_select = true" v-if="!show_server_select"> Server </span> -->
+        <span>Server: </span>
         <select v-model="ip_port"  >
             <option value="api.llm-viewer.com:5000">api.llm-viewer.com</option>
             <option value="localhost:5000">localhost</option>
         </select>
+    </div>
+    <div>
+        <span> | </span>
+        <a href="https://github.com/hahnyuan/LLM-Viewer" target="_blank" class="hover-bold">Document</a>
+        <!-- <a href="https://github.com/hahnyuan/LLM-Viewer" target="_blank"> Document </a> -->
+        <!-- Document -->
     </div>
 </template>
 
@@ -48,6 +48,8 @@ const ip_port = inject('ip_port');
 
 const avaliable_hardwares = ref([]);
 const avaliable_model_ids=ref([]);
+
+const version=ref(llm_viewer_frontend_version)
 
 function update_avaliable(){
     const url = 'http://' + ip_port.value + '/get_avaliable'
@@ -123,4 +125,9 @@ watch(ip_port, (n) => {
     /* 左对齐 */
     text-align: left;
 }
+
+.hover-bold:hover {
+  font-weight: bold;
+}
+
 </style>

@@ -64,7 +64,7 @@
         <h3>Decode</h3>
         <div v-for="(value, key) in total_results['decode']" :key="key" class="network-wise-info-item">
             <span v-if="['bound'].includes(key)">{{ key }}: {{ value }}</span>
-            <span v-else-if="['time_cost'].includes(key)">{{ key }}: {{ strNumberTime(value) }}</span>
+            <span v-else-if="['inference_time'].includes(key)">{{ key }}: {{ strNumberTime(value) }}</span>
             <span v-else>{{ key }}: {{ strNumber(value) }}</span>
         </div>
         
@@ -73,7 +73,7 @@
         <h3>Prefill</h3>
         <div v-for="(value, key) in total_results['prefill']" :key="key" class="network-wise-info-item">
             <span v-if="['bound'].includes(key)">{{ key }}: {{ value }}</span>
-            <span v-else-if="['time_cost'].includes(key)">{{ key }}: {{ strNumberTime(value) }}</span>
+            <span v-else-if="['inference_time'].includes(key)">{{ key }}: {{ strNumberTime(value) }}</span>
             <span v-else>{{ key }}: {{ strNumber(value) }}</span>
         </div>
     </div>

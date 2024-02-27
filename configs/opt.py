@@ -25,11 +25,11 @@ def get_linear_layers(config):
     key_value_heads=get_num_key_value_heads(config)
     attention_heads=get_num_attention_heads(config)
     return {
-        "q_proj":[hidden_size, hidden_size,"self_attn_norm"],
-        "k_proj":[hidden_size, hidden_size*key_value_heads/attention_heads,"self_attn_norm"],
-        "v_proj":[hidden_size, hidden_size*key_value_heads/attention_heads,"self_attn_norm"],
-        "out_proj":[hidden_size, hidden_size,"sv_matmul"],
-        "gate_proj":[hidden_size, intermediate_size,"mlp_norm"],
-        "up_proj":[hidden_size,intermediate_size,"mlp_norm"],
-        "down_proj":[intermediate_size, hidden_size,"mlp_act"],
+        "q_proj":[hidden_size, hidden_size],
+        "k_proj":[hidden_size, hidden_size*key_value_heads/attention_heads],
+        "v_proj":[hidden_size, hidden_size*key_value_heads/attention_heads],
+        "out_proj":[hidden_size, hidden_size],
+        "gate_proj":[hidden_size, intermediate_size],
+        "up_proj":[hidden_size,intermediate_size],
+        "down_proj":[intermediate_size, hidden_size],
     }

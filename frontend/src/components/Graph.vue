@@ -16,7 +16,7 @@
             </div>
             <div v-for="(value, key) in all_node_info[selected_node_id]" :key="key" class="float-node-info-item">
                 <span v-if="['bound'].includes(key)">{{ key }}: {{ value }}</span>
-                <span v-else-if="['time_cost'].includes(key)">{{ key }}: {{ strNumberTime(value) }}</span>
+                <span v-else-if="['inference_time'].includes(key)">{{ key }}: {{ strNumberTime(value) }}</span>
                 <span v-else>{{ key }}: {{ strNumber(value) }}</span>
             </div>
             <div class="float-node-info-item">

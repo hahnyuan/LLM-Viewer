@@ -13,4 +13,7 @@ def roofline_analyze(bandwidth, max_OPS, OPs, memory_access):
     else:
         bound = "compute"
         performance = y_max
+    if performance==0:
+        1==1
+        pass
     return arithmetic_intensity, performance, bound

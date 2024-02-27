@@ -13,7 +13,7 @@ ALL_DATA_NAMES = [
     "store_act",
     "load_kv_cache",
     "store_kv_cache",
-    "time_cost",
+    "inference_time",
 ]
 
 
@@ -65,7 +65,7 @@ class ModelAnalyzer:
         arithmetic_intensity, performance, bound = roofline_analyze(
             bandwidth, max_OPS, OPs, memory_access
         )
-        time_cost = OPs / performance
+        inference_time = OPs / performance
         self.results[stage][layer_name] = {
             "OPs": OPs,
             "memory_access": memory_access,
@@ -77,7 +77,7 @@ class ModelAnalyzer:
             "store_act": store_act,
             "load_kv_cache": load_kv_cache,
             "store_kv_cache": store_kv_cache,
-            "time_cost": time_cost,
+            "inference_time": inference_time,
         }
 
     def save_csv(self, save_path=None):
@@ -102,19 +102,21 @@ class ModelAnalyzer:
                 )
                 # legend
                 f.write(
-                    f"layer_name,OPs,Access,arithmetic_intensity,performance,bound,load_weight,load_act,store_act,load_kv_cache,store_kv_cache,time_cost\n"
+                    f"layer_name,OPs,Access,arithmetic_intensity,performance,bound,load_weight,load_act,store_act,load_kv_cache,store_kv_cache,inference_time\n"
                 )
             with open(file_name, "a+") as f:
                 for layer_name, result in self.results[stage].items():
                     f.write(
-                        f"{layer_name},{str_number(result['OPs'])},{str_number(result['memory_access'])}B,{str_number(result['arithmetic_intensity'])},{str_number(result['performance'])},{result['bound']},{str_number(result['load_weight'])}B,{str_number(result['load_act'])}B,{str_number(result['store_act'])}B,{str_number(result['load_kv_cache'])}B,{str_number(result['store_kv_cache'])}B,{str_number_time(result['time_cost'])}s\n"
+                        f"{layer_name},{str_number(result['OPs'])},{str_number(result['memory_access'])}B,{str_number(result['arithmetic_intensity'])},{str_number(result['performance'])},{result['bound']},{str_number(result['load_weight'])}B,{str_number(result['load_act'])}B,{str_number(result['store_act'])}B,{str_number(result['load_kv_cache'])}B,{str_number(result['store_kv_cache'])}B,{str_number_time(result['inference_time'])}s\n"
                     )
 
     def analyze(self, seqlen, batchsize, w_bit=16, a_bit=16, kv_bit=None):
         """
         return: results
-        format is {"decode":{layer_name:{"OPs":,"memory_access":,"arithmetic_intensity":,"performance":,"bound":,"load_weight":,"load_act":,"store_act":,"load_kv_cache":,"store_kv_cache":,"time_cost":}},"prefill":{layer_name:{"OPs":,"memory_access":,"arithmetic_intensity":,"performance":,"bound":,"load_weight":,"load_act":,"store_act":,"load_kv_cache":,"store_kv_cache":,"time_cost":}},"total_results":{decode:{},prefill:{}}}
+        format is {"decode":{layer_name:{"OPs":,"memory_access":,"arithmetic_intensity":,"performance":,"bound":,"load_weight":,"load_act":,"store_act":,"load_kv_cache":,"store_kv_cache":,"inference_time":}},"prefill":{layer_name:{"OPs":,"memory_access":,"arithmetic_intensity":,"performance":,"bound":,"load_weight":,"load_act":,"store_act":,"load_kv_cache":,"store_kv_cache":,"inference_time":}},"total_results":{decode:{},prefill:{}}}
         """
+        assert seqlen>0
+        assert batchsize>0
         self.results = {"decode": {}, "prefill": {}}
         if kv_bit is None:
             kv_bit = a_bit
@@ -338,17 +340,35 @@ class ModelAnalyzer:
             total_results["prefill"]["load_weight"]
             + total_results["prefill"]["store_kv_cache"]
         )
-        decode_tmporary_activation = 0
+        decode_tmp_act = 0
         for layer_name, result in self.results["decode"].items():
-            decode_tmporary_activation += result["store_act"]
-        total_results["decode"]["memory_footprint"] = (
-            decode_tmporary_activation + weight_kv_footprint
+            decode_tmp_act += result["store_act"]
+        total_results["decode"]["memory_consumption"] = (
+            decode_tmp_act + weight_kv_footprint
         )
-        prefill_tmporary_activation = 0
+        total_results["decode"]["memory_consumption_tmp_act"] = (
+            decode_tmp_act
+        )
+        total_results["decode"]["memory_consumption_weight"] = (
+            total_results["prefill"]["load_weight"]
+        )
+        total_results["decode"]["memory_consumption_kv_cache"] = (
+            total_results["prefill"]["store_kv_cache"]
+        )
+        prefill_tmp_act = 0
         for layer_name, result in self.results["prefill"].items():
-            prefill_tmporary_activation += result["store_act"]
-        total_results["prefill"]["memory_footprint"] = (
-            prefill_tmporary_activation + weight_kv_footprint
+            prefill_tmp_act += result["store_act"]
+        total_results["prefill"]["memory_consumption"] = (
+            prefill_tmp_act + weight_kv_footprint
+        )
+        total_results["prefill"]["memory_consumption_tmp_act"] = (
+            prefill_tmp_act
+        )
+        total_results["prefill"]["memory_consumption_weight"] = (
+            total_results["prefill"]["load_weight"]
+        )
+        total_results["prefill"]["memory_consumption_kv_cache"] = (
+            total_results["prefill"]["store_kv_cache"]
         )
 
         # lm_head
@@ -376,11 +396,11 @@ class ModelAnalyzer:
         prefill_result = self.analyze(
             prompt_len + gen_len, batchsize, w_bit, a_bit, kv_bit
         )
-        time_cost=prefill_result["total_results"]["prefill"]["time_cost"]
+        inference_time=prefill_result["total_results"]["prefill"]["inference_time"]
         for i in range(prompt_len, prompt_len + gen_len):
             result = self.analyze(i, batchsize, w_bit, a_bit, kv_bit)
-            time_cost=result["total_results"]["decode"]["time_cost"]
-        return {"time_cost":time_cost}
+            inference_time=result["total_results"]["decode"]["inference_time"]
+        return {"inference_time":inference_time}
 
     def get_hardware_info(self):
         bandwidth = hardware_params[self.hardware]["bandwith"]

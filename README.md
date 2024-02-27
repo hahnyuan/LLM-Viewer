@@ -24,6 +24,7 @@ As shown in the Figure, the workflow consists of the following steps:
 ## Web Usage
 
 To use LLM-Viewer in a web browser, go to the web-site [LLM-Viewer Web](http://llm-viewer.com).
+You can click the node to get the detailed analysis of the layer.
 
 ## CLI Usage
 

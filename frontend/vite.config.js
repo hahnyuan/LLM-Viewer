@@ -12,5 +12,9 @@ export default defineConfig({
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))
     }
+  },
+  define: {
+    llm_viewer_frontend_version: JSON.stringify(process.env.npm_package_version)
   }
+
 })
