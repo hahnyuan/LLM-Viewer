@@ -5,6 +5,7 @@
 
 LLM-Viewer is a powerful tool for visualizing Language and Learning Models (LLMs) and analyzing the performance on different hardware platforms. It enables network-wise analysis, considering factors such as peak memory consumption and total inference time cost. With LLM-Viewer, you can gain valuable insights into LLM inference and performance optimization.
 You can use LLM-Viewer in a web browser or as a command line interface (CLI) tool. The web version provides a user-friendly interface for easy configuration and visualization, you can access it at [LLM-Viewer Web](http://llm-viewer.com).
+For more information, please read our paper [LLM Inference Unveiled: Survey and Roofline Model Insights](https://arxiv.org/pdf/2402.16363.pdf).
 
 
 ## Workflow
@@ -41,4 +42,19 @@ python3 analyze_cli.py facebook/opt-125m nvidia_A6000
 python3 analyze_cli.py meta-llama/Llama-2-7b-hf nvidia_A6000 --batchsize 1 --seqlen 2048
 python3 analyze_cli.py meta-llama/Llama-2-13b-hf nvidia_A6000 --batchsize 16 --seqlen 2048
 python3 analyze_cli.py meta-llama/Llama-2-13b-hf nvidia_A6000 --batchsize 1 --seqlen 8192
+```
+
+## Citation
+
+If you are using LLM-Viewer in your research, please cite our paper:
+
+```
+@misc{yuan2024llm,
+      title={LLM Inference Unveiled: Survey and Roofline Model Insights}, 
+      author={Zhihang Yuan and Yuzhang Shang and Yang Zhou and Zhen Dong and Chenhao Xue and Bingzhe Wu and Zhikai Li and Qingyi Gu and Yong Jae Lee and Yan Yan and Beidi Chen and Guangyu Sun and Kurt Keutzer},
+      year={2024},
+      eprint={2402.16363},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL}
+}
 ```
