@@ -6,7 +6,7 @@
 LLM-Viewer is a tool for visualizing Language and Learning Models (LLMs) and analyzing the performance on different hardware platforms. It enables network-wise analysis, considering factors such as peak memory consumption and total inference time cost. With LLM-Viewer, you can gain valuable insights into LLM inference and performance optimization.
 You can use LLM-Viewer in a web browser or as a command line interface (CLI) tool. The web version provides a user-friendly interface for easy configuration and visualization, you can access it at [LLM-Viewer Web](http://llm-viewer.com).
 
-For more information, please read our paper [LLM Inference Unveiled: Survey and Roofline Model Insights](https://arxiv.org/pdf/2402.16363.pdf).
+We invite you to read our paper [LLM Inference Unveiled: Survey and Roofline Model Insights](https://arxiv.org/pdf/2402.16363.pdf).
 
 
 ## Workflow

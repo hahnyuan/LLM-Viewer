@@ -1,5 +1,8 @@
 <template>
     <div class="main_graph" ref="graphContainer">
+        <div id="info-window" class="float-info-window" v-if="info_window_str.length>0">
+            <h3> {{ info_window_str }}</h3>
+        </div>
         <div id="graphContainer" @resize="handleResize"></div>
 
         <div class="float-search-window">
@@ -45,6 +48,7 @@ const ip_port = inject('ip_port')
 const total_results = inject('total_results')
 var hardware_info = {}
 
+
 var graph = null;
 var graph_data;
 const all_node_info = ref({})
@@ -56,7 +60,7 @@ var searchResult = []
 const selected_node_id = ref("")
 var roofline_chart = null
 
-
+const info_window_str = ref('')
 
 const changeGraphSizeWaitTimer = ref(false);
 window.onresize = () => {
@@ -75,8 +79,10 @@ window.onresize = () => {
 function graphUpdate(is_fit_view = false, is_init = false) {
     const url = 'http://' + ip_port.value + '/get_graph'
     console.log("graphUpdate", url)
+    info_window_str.value="Loading from server..."
     axios.post(url, { model_id: model_id.value, hardware: hardware.value, inference_config: InferenceConfig.value }).then(function (response) {
         console.log(response);
+        info_window_str.value=""
         graph_data = response.data
         for (let i = 0; i < graph_data.nodes.length; i++) {
             all_node_info.value[graph_data.nodes[i].id] = graph_data.nodes[i].info;
@@ -100,11 +106,15 @@ function graphUpdate(is_fit_view = false, is_init = false) {
             setTimeout(() => {
                 graph.fitView();
             }, 10);
-            update_roofline_model()
         }
+        setTimeout(() => {
+            update_roofline_model();
+        }, 10);
+        
 
     })
         .catch(function (error) {
+            info_window_str="Error in get_graph"
             console.log("error in graphUpdate");
             console.log(error);
         });
@@ -112,8 +122,8 @@ function graphUpdate(is_fit_view = false, is_init = false) {
 }
 
 watch(() => graphUpdateTrigger.value, () => graphUpdate(false))
-watch(() => graphUpdateTrigger.value, () => update_roofline_model())
-watch(() => graphUpdateTrigger.value, () => release_select())
+// watch(() => graphUpdateTrigger.value, () => update_roofline_model())
+// watch(() => graphUpdateTrigger.value, () => release_select())
 
 function handleSearch(newText, oldText) {
     console.log("handleSearch", newText)
@@ -332,6 +342,18 @@ function clickNode(node) {
     max-height: 50vh;
     background-color: #f1f1f1b7;
     padding: 3px;
+    overflow-y: auto;
+}
+
+
+.float-info-window {
+    position: absolute;
+    top: 10px;
+    left: 40%;
+    height: auto;
+    width: 20%;
+    background-color: #f1f1f1b7;
+    padding: 5px;
     overflow-y: auto;
 }
 
