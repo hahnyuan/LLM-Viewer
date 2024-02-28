@@ -1,16 +1,17 @@
 <template>
     <div class="title">
-        <!-- <img :src="publicPath + '/favicon.ico'" alt="Header Image"> -->
-        LLM-Viewer v{{ version }}</div>
+        <a href="https://github.com/hahnyuan/LLM-Viewer" target="_blank" class="hover-bold">LLM-Viewer</a>
+        v{{ version }}
+    </div>
     <div class="header_button">
-        | 
+        |
         <span>Model: </span>
         <select v-model="select_model_id">
             <!-- <option value="meta-llama/Llama-2-7b-hf">meta-llama/Llama-2-7b-hf</option>
             <option value="meta-llama/Llama-2-13b-hf">meta-llama/Llama-2-13b-hf</option>
             <option value="meta-llama/Llama-2-70b-hf">meta-llama/Llama-2-70b-hf</option> -->
             <!-- <option value="ChatGLM">ChatGLM</option> -->
-            <option v-for="model_id in avaliable_model_ids" :value="model_id">{{model_id}}</option>
+            <option v-for="model_id in avaliable_model_ids" :value="model_id">{{ model_id }}</option>
         </select>
         <span> | </span>
         <span>Hardware: </span>
@@ -19,22 +20,40 @@
             <option value="nvidia_A100">nvidia_A100</option>
             <option value="nvidia_H100">nvidia_H100</option> -->
             <!-- <option value="ChatGLM">ChatGLM</option> -->
-            <option v-for="hardware in avaliable_hardwares" :value="hardware">{{hardware}}</option>
+            <option v-for="hardware in avaliable_hardwares" :value="hardware">{{ hardware }}</option>
         </select>
     </div>
     <div>
         <span> | </span>
         <span>Server: </span>
-        <select v-model="ip_port"  >
+        <select v-model="ip_port">
             <option value="api.llm-viewer.com:5000">api.llm-viewer.com</option>
             <option value="localhost:5000">localhost</option>
         </select>
     </div>
     <div>
         <span> | </span>
-        <a href="https://github.com/hahnyuan/LLM-Viewer" target="_blank" class="hover-bold">Document</a>
-        <!-- <a href="https://github.com/hahnyuan/LLM-Viewer" target="_blank"> Document </a> -->
-        <!-- Document -->
+        <span class="hover-bold" @click="is_show_help = ! is_show_help">Help</span>
+    </div>
+    <div>
+        <span> | </span>
+        <a href="https://github.com/hahnyuan/LLM-Viewer" target="_blank" class="hover-bold">About</a>
+    </div>
+    <div v-if="is_show_help" class="float-info-window">
+        <!-- item -->
+        <p>LLM-Viewer is a tool to visualize the LLM model and analyze the deployment on hardware devices.</p>
+        <p>
+            At the center of the page, you can see the graph of the LLM model. Click the node to see the detail of the node.
+        </p>
+        <p>↑ At the top of the page, you can set the LLM model, hardware devices, and server.
+            If you deploy the LLM-Viewer localhost, you can select the localhost server.
+        </p>
+        <p>
+            ← At the left of the page, you can see the configuration pannel. You can set the inference config and optimization config.
+        </p>
+        <p>
+            ↙ The Network-wise Analysis result is demonstrated in the left pannel.
+        </p>
     </div>
 </template>
 
@@ -47,11 +66,13 @@ const graphUpdateTrigger = inject('graphUpdateTrigger');
 const ip_port = inject('ip_port');
 
 const avaliable_hardwares = ref([]);
-const avaliable_model_ids=ref([]);
+const avaliable_model_ids = ref([]);
 
-const version=ref(llm_viewer_frontend_version)
+const version = ref(llm_viewer_frontend_version)
 
-function update_avaliable(){
+const is_show_help = ref(false)
+
+function update_avaliable() {
     const url = 'http://' + ip_port.value + '/get_avaliable'
     axios.get(url).then(function (response) {
         console.log(response);
@@ -127,7 +148,24 @@ watch(ip_port, (n) => {
 }
 
 .hover-bold:hover {
-  font-weight: bold;
+    font-weight: bold;
 }
 
+a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.float-info-window {
+    position: absolute;
+    top: 80px;
+    left: 40%;
+    height: auto;
+    width: 30%;
+    background-color: #f1f1f1ed;
+    /* padding: 5px; */
+    /* background-color: #fff; */
+    /* border: 2px solid #4e4e4e; */
+    z-index: 999;
+}
 </style>
