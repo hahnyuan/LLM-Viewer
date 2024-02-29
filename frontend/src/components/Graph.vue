@@ -42,8 +42,8 @@ import annotationPlugin from 'chartjs-plugin-annotation';
 
 const model_id = inject('model_id')
 const hardware = inject('hardware')
-const graphUpdateTrigger = inject('graphUpdateTrigger')
-const InferenceConfig = inject('InferenceConfig')
+const global_update_trigger = inject('global_update_trigger')
+const global_inference_config = inject('global_inference_config')
 const ip_port = inject('ip_port')
 const total_results = inject('total_results')
 var hardware_info = {}
@@ -76,11 +76,12 @@ window.onresize = () => {
     }
 };
 
-function graphUpdate(is_fit_view = false, is_init = false) {
+function graphUpdate() {
     const url = 'http://' + ip_port.value + '/get_graph'
     console.log("graphUpdate", url)
     info_window_str.value="Loading from server..."
-    axios.post(url, { model_id: model_id.value, hardware: hardware.value, inference_config: InferenceConfig.value }).then(function (response) {
+    var is_init=false
+    axios.post(url, { model_id: model_id.value, hardware: hardware.value, inference_config: global_inference_config.value }).then(function (response) {
         console.log(response);
         info_window_str.value=""
         graph_data = response.data
@@ -89,9 +90,12 @@ function graphUpdate(is_fit_view = false, is_init = false) {
         }
         total_results.value = response.data.total_results
         hardware_info = response.data.hardware_info
-        if (is_init) {
-            graph.changeData(graph_data)
-        } else {
+
+        const old_ids = new Set(graph.getNodes().map(node => node.get('id')));
+        const new_ids = new Set(graph_data.nodes.map(node => node.id));
+        const is_equal=old_ids.size === new_ids.size && [...old_ids].every(key => new_ids.has(key));
+
+        if (is_equal) {
             // iterate each node
             graph_data.nodes.forEach(function (node) {
                 // update the node
@@ -99,31 +103,32 @@ function graphUpdate(is_fit_view = false, is_init = false) {
                     description: node.description,
                 });
             });
-
+        } else {
+            graph.clear()
+            graph.data(graph_data)
+            graph.render()
         }
         console.log(graph_data)
-        if (is_fit_view) {
-            setTimeout(() => {
-                graph.fitView();
-            }, 10);
-        }
         setTimeout(() => {
             update_roofline_model();
         }, 10);
         
+        setTimeout(() => {
+            graph.fitView();
+        }, 10);
 
     })
         .catch(function (error) {
-            info_window_str="Error in get_graph"
+            info_window_str.value="Error in get_graph"
             console.log("error in graphUpdate");
             console.log(error);
         });
 
 }
 
-watch(() => graphUpdateTrigger.value, () => graphUpdate(false))
-// watch(() => graphUpdateTrigger.value, () => update_roofline_model())
-// watch(() => graphUpdateTrigger.value, () => release_select())
+watch(() => global_update_trigger.value, () => graphUpdate(false))
+// watch(() => global_update_trigger.value, () => update_roofline_model())
+// watch(() => global_update_trigger.value, () => release_select())
 
 function handleSearch(newText, oldText) {
     console.log("handleSearch", newText)
@@ -301,7 +306,7 @@ onMounted(() => {
     graph.on('canvas:click', (event) => {
         release_select()
     });
-    graphUpdate(true, true);
+    graphUpdate(true);
     graph.render();
     
     

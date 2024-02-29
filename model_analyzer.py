@@ -59,7 +59,7 @@ class ModelAnalyzer:
         store_kv_cache,
     ):
 
-        bandwidth, max_OPS = self.get_hardware_info()
+        bandwidth, max_OPS, onchip_buffer = self.get_hardware_info()
         memory_access = (
             load_weight + load_act + store_act + load_kv_cache + store_kv_cache
         )
@@ -118,7 +118,7 @@ class ModelAnalyzer:
         w_bit=16,
         a_bit=16,
         kv_bit=None,
-        flashattention_kv_block_size=None,
+        use_flashattention=False,
     ):
         """
         seqlen: sequence length
@@ -126,7 +126,7 @@ class ModelAnalyzer:
         w_bit: weight bit
         a_bit: activation bit
         kv_bit: key and value bit. if it is None, it will be the same as a_bit
-        flashattention_kv_block_size: int for flash attention kv block size. if it is None, not use flash attention/flash decoding
+        use_flashattention: use flash attention/flash decoding
 
         return is a dict with the following format:
         {
@@ -223,11 +223,12 @@ class ModelAnalyzer:
         qk_matmul_OPs = seqlen * head_size * num_attention_heads * batchsize * 2
         sv_matmul_OPs = 1 * head_size * seqlen * num_attention_heads * batchsize * 2
         softmax_OPs = batchsize * num_attention_heads * seqlen * 1 * 5
-        if flashattention_kv_block_size:
+        if use_flashattention:
             name = f"fused_attention"
-            n_kv_blocks = math.ceil(
-                (seqlen * batchsize) / flashattention_kv_block_size
-            )
+            bandwidth, max_OPS, onchip_buffer = self.get_hardware_info()
+            # flashattention-2 https://arxiv.org/pdf/2307.08691.pdf
+            block_size_r=min(math.ceil(onchip_buffer / (kv_byte * head_size)),head_size)
+            n_blocks_r = math.ceil(1/block_size_r)
             q_numel = (1) * head_size * batchsize * num_attention_heads * a_byte
             o_numel = 1 * seqlen * batchsize * num_attention_heads * a_byte
             self._analyze_to_results(
@@ -235,9 +236,9 @@ class ModelAnalyzer:
                 name,
                 OPs=qk_matmul_OPs + sv_matmul_OPs + softmax_OPs,
                 load_weight=0,
-                load_act=n_kv_blocks * q_numel + (n_kv_blocks - 1) * o_numel,
-                store_act=n_kv_blocks * o_numel,
-                load_kv_cache=(seqlen)
+                load_act= q_numel,
+                store_act=o_numel*2, # initialize O and save O
+                load_kv_cache=n_blocks_r*(seqlen)
                 * head_size
                 * batchsize
                 * num_attention_heads
@@ -324,14 +325,19 @@ class ModelAnalyzer:
             )
 
         # for prefill
-        qk_matmul_OPs = seqlen * seqlen * head_size * num_attention_heads * batchsize * 2
-        sv_matmul_OPs = seqlen * head_size * seqlen * num_attention_heads * batchsize * 2
+        qk_matmul_OPs = (
+            seqlen * seqlen * head_size * num_attention_heads * batchsize * 2
+        )
+        sv_matmul_OPs = (
+            seqlen * head_size * seqlen * num_attention_heads * batchsize * 2
+        )
         softmax_OPs = batchsize * num_attention_heads * seqlen * seqlen * 5
-        if flashattention_kv_block_size:
+        if use_flashattention:
             name = f"fused_attention"
-            n_kv_blocks = math.ceil(
-                (seqlen * batchsize) / flashattention_kv_block_size
-            )
+            bandwidth, max_OPS, onchip_buffer = self.get_hardware_info()
+            # flashattention-2 https://arxiv.org/pdf/2307.08691.pdf
+            block_size_r=min(math.ceil(onchip_buffer / (kv_byte * head_size)),head_size)
+            n_blocks_r = math.ceil(seqlen/block_size_r)
             q_numel = seqlen * head_size * batchsize * num_attention_heads * a_byte
             o_numel = seqlen * seqlen * batchsize * num_attention_heads * a_byte
             self._analyze_to_results(
@@ -339,9 +345,9 @@ class ModelAnalyzer:
                 name,
                 OPs=qk_matmul_OPs + sv_matmul_OPs + softmax_OPs,
                 load_weight=0,
-                load_act=n_kv_blocks * q_numel + (n_kv_blocks - 1) * o_numel,
-                store_act=n_kv_blocks * o_numel,
-                load_kv_cache=(seqlen)
+                load_act= q_numel,
+                store_act=o_numel*2, # initialize O and save O
+                load_kv_cache=n_blocks_r*(seqlen)
                 * head_size
                 * batchsize
                 * num_attention_heads
@@ -506,4 +512,5 @@ class ModelAnalyzer:
             max_OPS = hardware_params[self.hardware]["INT8"]
         else:
             max_OPS = hardware_params[self.hardware]["FP16"]
-        return bandwidth, max_OPS
+        onchip_buffer = hardware_params[self.hardware]["onchip_buffer"]
+        return bandwidth, max_OPS, onchip_buffer

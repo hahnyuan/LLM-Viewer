@@ -42,17 +42,20 @@ def get_model_graph(model_id, hardware, config_path, inference_config):
     kv_bit = get_quant_bit(inference_config["kv_quant"])
     seq_length = int(inference_config["seq_length"])
     batch_size = int(inference_config["batch_size"])
+    use_flashattention=bool(inference_config["use_flashattention"])
+
     analyzer = get_analyer(model_id, hardware, config_path)
     result = analyzer.analyze(
-        seqlen=seq_length, batchsize=batch_size, w_bit=w_bit, a_bit=a_bit, kv_bit=kv_bit
+        seqlen=seq_length, batchsize=batch_size, w_bit=w_bit, a_bit=a_bit, kv_bit=kv_bit,use_flashattention=use_flashattention
     )
     stage = inference_config["stage"]
     total_results= result["total_results"]
     result = result[stage]
-    bandwidth, max_OPS=analyzer.get_hardware_info()
+    bandwidth, max_OPS,onchip_buffer=analyzer.get_hardware_info()
     hardware_info={
         "bandwidth":bandwidth,
-        "max_OPS":max_OPS
+        "max_OPS":max_OPS,
+        "onchip_buffer":onchip_buffer
     }
 
     nodes = [
@@ -74,8 +77,13 @@ def get_model_graph(model_id, hardware, config_path, inference_config):
         for input_name in input_names:
             edge = {"source": input_name, "target": name}
             edges.append(edge)
-
-    for name, input_names in analyzer.config.transformer_layer_graph.items():
+    
+    if use_flashattention:
+        layer_graph=analyzer.config.flashattention_transformer_layer_graph
+    else:
+        layer_graph=analyzer.config.transformer_layer_graph
+    
+    for name, input_names in layer_graph.items():
         if name in ["input", "output"]:
             OPs = 0
             memory_access = 0

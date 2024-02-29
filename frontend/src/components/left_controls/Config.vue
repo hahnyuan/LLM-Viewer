@@ -1,30 +1,30 @@
 <template>
     <h2>Inference Config</h2>
-    <div>
+    <div class="config_div">
         Stage:
         <input type="radio" v-model="inference_stage" id="decode" value="decode" checked>
         <label for="decode">Decode</label>
         <input type="radio" v-model="inference_stage" id="prefill" value="prefill">
         <label for="prefill">Prefill</label>
     </div>
-    <div class="slider">
+    <div class="config_div">
         Batchsize:
         <input type="range" min="1" max="256" value="1" v-model.lazy="batch_size">
         <input type="number" v-model.lazy="batch_size" min="1" max="256">
     </div>
-    <div class="slider">
+    <div class="config_div">
         SeqLength:
         <input type="range" min="1" max="4096" value="1024" v-model.lazy="seq_length">
         <!-- <span id="seq_length">1024</span> -->
         <input type="number" v-model.lazy="seq_length" min="1" max="4096">
     </div>
-    <!-- <div class="slider">
+    <!-- <div class="config_div">
         Generation Length:
         <input type="range" min="1" max="4096" value="1024" oninput="gen_length.innerText = this.value">
         <p id="gen_length">1</p>
     </div> -->
     <h2>Optimization Config</h2>
-    <div class="slider">
+    <div class="config_div">
         Weight Quantization:
         <select v-model="w_quant">
             <option value="FP16">FP16</option>
@@ -32,7 +32,7 @@
             <option value="INT4">INT4</option>
         </select>
     </div>
-    <div class="slider">
+    <div class="config_div">
         Activation Quantization
         <select v-model="a_quant">
             <option value="FP16">FP16</option>
@@ -40,7 +40,7 @@
             <option value="INT4">INT4</option>
         </select>
     </div>
-    <div class="slider">
+    <div class="config_div">
         KV Cache Quantization
         <select v-model="kv_quant">
             <option value="FP16">FP16</option>
@@ -48,12 +48,16 @@
             <option value="INT4">INT4</option>
         </select>
     </div>
+    <div class="config_div">
+        Use FlashAttention
+        <input type="checkbox" v-model="use_flashattention">
+    </div>
 
-    <!-- <div class="slider">
+    <!-- <div class="config_div">
         Use Flash Attention
         <input type="checkbox">
     </div>
-    <div class="slider">
+    <div class="config_div">
         Decoding Method
         <select>
             <option value="Greedy">Greedy</option>
@@ -83,10 +87,10 @@
 import { inject, ref, watch, computed } from 'vue';
 import { strNumber,strNumberTime } from '@/utils.js';
 
-const graphUpdateTrigger = inject('graphUpdateTrigger');
+const global_update_trigger = inject('global_update_trigger');
 
 
-const InferenceConfig = inject('InferenceConfig');
+const global_inference_config = inject('global_inference_config');
 const total_results = inject('total_results');
 
 const inference_stage = ref('decode');
@@ -95,49 +99,57 @@ const seq_length = ref(1024);
 const w_quant = ref('FP16');
 const a_quant = ref('FP16');
 const kv_quant = ref('FP16');
+const use_flashattention = ref(false);
 
 watch(inference_stage, (new_stage) => {
     console.log("inference_stage", new_stage)
-    InferenceConfig.value.stage = new_stage
-    graphUpdateTrigger.value += 1
+    global_inference_config.value.stage = new_stage
+    global_update_trigger.value += 1
 })
 
 watch(batch_size, (n) => {
     console.log("inference_stage", n)
-    InferenceConfig.value.batch_size = n
-    graphUpdateTrigger.value += 1
+    global_inference_config.value.batch_size = n
+    global_update_trigger.value += 1
 })
 
 watch(seq_length, (n) => {
     console.log("seq_length", n)
-    InferenceConfig.value.seq_length = n
-    graphUpdateTrigger.value += 1
+    global_inference_config.value.seq_length = n
+    global_update_trigger.value += 1
 })
 
 watch(w_quant, (n) => {
     console.log("w_quant", n)
-    InferenceConfig.value.w_quant = n
-    graphUpdateTrigger.value += 1
+    global_inference_config.value.w_quant = n
+    global_update_trigger.value += 1
 })
 
 watch(a_quant, (n) => {
     console.log("a_quant", n)
-    InferenceConfig.value.a_quant = n
-    graphUpdateTrigger.value += 1
+    global_inference_config.value.a_quant = n
+    global_update_trigger.value += 1
 })
 
 watch(kv_quant, (n) => {
     console.log("kv_quant", n)
-    InferenceConfig.value.kv_quant = n
-    graphUpdateTrigger.value += 1
+    global_inference_config.value.kv_quant = n
+    global_update_trigger.value += 1
 })
+
+watch(use_flashattention, (n) => {
+    console.log("use_flashattention", n)
+    global_inference_config.value.use_flashattention = n
+    global_update_trigger.value += 1
+})
+
 
 </script>
 
 <style>
-.input_config {
-    border: 1px solid #ccc;
-    margin: 3px;
+
+.config_div{
+    border-top: 1px solid #e2e2e2;
 }
 
 .hover_color {

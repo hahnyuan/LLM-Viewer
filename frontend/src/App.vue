@@ -6,19 +6,27 @@ import { ref, computed, provide } from 'vue';
 
 const model_id = ref("meta-llama/Llama-2-7b-hf");
 const hardware = ref("nvidia_V100");
-const graphUpdateTrigger = ref(1);
+const global_update_trigger = ref(1);
 const total_results = ref({});
-const ip_port=ref("api.llm-viewer.com:5000");
+const ip_port = ref("api.llm-viewer.com:5000");
 
 provide("model_id", model_id);
 provide("hardware", hardware);
-provide("graphUpdateTrigger", graphUpdateTrigger);
+provide("global_update_trigger", global_update_trigger);
 provide("total_results", total_results);
 provide("ip_port", ip_port);
 
 
-const InferenceConfig = ref({"stage": "decode", batch_size:1 ,seq_length:1024, w_quant:"FP16", a_quant:"FP16", kv_quant:"FP16"});
-provide("InferenceConfig", InferenceConfig);
+const global_inference_config = ref({ 
+  "stage": "decode", 
+  batch_size: 1, 
+  seq_length: 1024, 
+  w_quant: "FP16", 
+  a_quant: "FP16", 
+  kv_quant: "FP16", 
+  use_flashattention: false
+});
+provide("global_inference_config", global_inference_config);
 
 </script>
 
@@ -37,8 +45,8 @@ provide("InferenceConfig", InferenceConfig);
 
 <style>
 body {
-  overflow-x: hidden; /* 禁止横向滚动 */
-  overflow-y: hidden; /* 禁止纵向滚动 */
+  overflow-x: hidden;
+  overflow-y: hidden;
 }
 
 .app_container {

@@ -62,7 +62,7 @@ import { inject, ref, watch, computed, onMounted } from 'vue';
 import axios from 'axios'
 const model_id = inject('model_id');
 const hardware = inject('hardware');
-const graphUpdateTrigger = inject('graphUpdateTrigger');
+const global_update_trigger = inject('global_update_trigger');
 const ip_port = inject('ip_port');
 
 const avaliable_hardwares = ref([]);
@@ -94,14 +94,14 @@ var select_model_id = ref('meta-llama/Llama-2-7b-hf');
 watch(select_model_id, (n) => {
     console.log("select_model_id", n)
     model_id.value = n
-    graphUpdateTrigger.value += 1
+    global_update_trigger.value += 1
 })
 
 var select_hardware = ref('nvidia_V100');
 watch(select_hardware, (n) => {
     console.log("select_hardware", n)
     hardware.value = n
-    graphUpdateTrigger.value += 1
+    global_update_trigger.value += 1
 })
 
 watch(ip_port, (n) => {
