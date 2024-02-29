@@ -56,4 +56,8 @@ transformer_layer_graph={
     "output":["mlp_add"]
 }
 
-
+flashattention_layers=[
+    "qk_matmul",
+    "softmax",
+    "sv_matmul"
+]

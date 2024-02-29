@@ -4,6 +4,7 @@ from hardwares.hardware_params import hardware_params
 from roofline_model import roofline_analyze
 from transformers import AutoTokenizer, AutoConfig, AutoModelForCausalLM
 from utils import str_number, str_number_time
+import math
 
 ALL_DATA_NAMES = [
     "OPs",
@@ -57,8 +58,8 @@ class ModelAnalyzer:
         load_kv_cache,
         store_kv_cache,
     ):
-        
-        bandwidth, max_OPS=self.get_hardware_info()
+
+        bandwidth, max_OPS = self.get_hardware_info()
         memory_access = (
             load_weight + load_act + store_act + load_kv_cache + store_kv_cache
         )
@@ -110,13 +111,63 @@ class ModelAnalyzer:
                         f"{layer_name},{str_number(result['OPs'])},{str_number(result['memory_access'])}B,{str_number(result['arithmetic_intensity'])},{str_number(result['performance'])},{result['bound']},{str_number(result['load_weight'])}B,{str_number(result['load_act'])}B,{str_number(result['store_act'])}B,{str_number(result['load_kv_cache'])}B,{str_number(result['store_kv_cache'])}B,{str_number_time(result['inference_time'])}s\n"
                     )
 
-    def analyze(self, seqlen, batchsize, w_bit=16, a_bit=16, kv_bit=None):
+    def analyze(
+        self,
+        seqlen,
+        batchsize,
+        w_bit=16,
+        a_bit=16,
+        kv_bit=None,
+        flashattention_kv_block_size=None,
+    ):
         """
-        return: results
-        format is {"decode":{layer_name:{"OPs":,"memory_access":,"arithmetic_intensity":,"performance":,"bound":,"load_weight":,"load_act":,"store_act":,"load_kv_cache":,"store_kv_cache":,"inference_time":}},"prefill":{layer_name:{"OPs":,"memory_access":,"arithmetic_intensity":,"performance":,"bound":,"load_weight":,"load_act":,"store_act":,"load_kv_cache":,"store_kv_cache":,"inference_time":}},"total_results":{decode:{},prefill:{}}}
+        seqlen: sequence length
+        batchsize: batch size
+        w_bit: weight bit
+        a_bit: activation bit
+        kv_bit: key and value bit. if it is None, it will be the same as a_bit
+        flashattention_kv_block_size: int for flash attention kv block size. if it is None, not use flash attention/flash decoding
+
+        return is a dict with the following format:
+        {
+            "decode": {
+                    "layer_name": {
+                            "OPs": "",
+                            "memory_access": "",
+                            "arithmetic_intensity": "",
+                            "performance": "",
+                            "bound": "",
+                            "load_weight": "",
+                            "load_act": "",
+                            "store_act": "",
+                            "load_kv_cache": "",
+                            "store_kv_cache": "",
+                            "inference_time": ""
+                    }
+            },
+            "prefill": {
+                    "layer_name": {
+                            "OPs": "",
+                            "memory_access": "",
+                            "arithmetic_intensity": "",
+                            "performance": "",
+                            "bound": "",
+                            "load_weight": "",
+                            "load_act": "",
+                            "store_act": "",
+                            "load_kv_cache": "",
+                            "store_kv_cache": "",
+                            "inference_time": ""
+                    }
+            },
+            "total_results": {
+                "decode": {},
+                "prefill": {}
+            }
+        }
         """
-        assert seqlen>0
-        assert batchsize>0
+        assert seqlen > 0
+        assert batchsize > 0
         self.results = {"decode": {}, "prefill": {}}
         if kv_bit is None:
             kv_bit = a_bit
@@ -169,46 +220,72 @@ class ModelAnalyzer:
         # for attention
         head_size = hidden_size // num_attention_heads
         # for decode
-        name = f"qk_matmul"
-        self._analyze_to_results(
-            "decode",
-            name,
-            OPs=seqlen * head_size * num_attention_heads * batchsize * 2,
-            load_weight=0,
-            load_act=(1) * head_size * batchsize * num_attention_heads * a_byte,
-            store_act=1 * seqlen * batchsize * num_attention_heads * a_byte,
-            load_kv_cache=(seqlen)
-            * head_size
-            * batchsize
-            * num_attention_heads
-            * kv_byte,
-            store_kv_cache=0,
-        )
-        name = f"sv_matmul"
-        self._analyze_to_results(
-            "decode",
-            name,
-            OPs=1 * head_size * seqlen * num_attention_heads * batchsize * 2,
-            load_weight=0,
-            load_act=(1 * seqlen * batchsize * num_attention_heads) * a_byte,
-            store_act=1 * head_size * batchsize * num_attention_heads * a_byte,
-            load_kv_cache=(seqlen * head_size * batchsize * num_attention_heads)
-            * kv_byte,
-            store_kv_cache=0,
-        )
+        qk_matmul_OPs = seqlen * head_size * num_attention_heads * batchsize * 2
+        sv_matmul_OPs = 1 * head_size * seqlen * num_attention_heads * batchsize * 2
+        softmax_OPs = batchsize * num_attention_heads * seqlen * 1 * 5
+        if flashattention_kv_block_size:
+            name = f"fused_attention"
+            n_kv_blocks = math.ceil(
+                (seqlen * batchsize) / flashattention_kv_block_size
+            )
+            q_numel = (1) * head_size * batchsize * num_attention_heads * a_byte
+            o_numel = 1 * seqlen * batchsize * num_attention_heads * a_byte
+            self._analyze_to_results(
+                "decode",
+                name,
+                OPs=qk_matmul_OPs + sv_matmul_OPs + softmax_OPs,
+                load_weight=0,
+                load_act=n_kv_blocks * q_numel + (n_kv_blocks - 1) * o_numel,
+                store_act=n_kv_blocks * o_numel,
+                load_kv_cache=(seqlen)
+                * head_size
+                * batchsize
+                * num_attention_heads
+                * kv_byte,
+                store_kv_cache=0,
+            )
 
-        name = f"softmax"
-        # max sub exp sum div
-        self._analyze_to_results(
-            "decode",
-            name,
-            OPs=batchsize * num_attention_heads * seqlen * 1 * 5,
-            load_weight=0,
-            load_act=batchsize * num_attention_heads * seqlen * 1 * a_byte,
-            store_act=batchsize * num_attention_heads * seqlen * 1 * a_byte,
-            load_kv_cache=0,
-            store_kv_cache=0,
-        )
+        else:
+            name = f"qk_matmul"
+            self._analyze_to_results(
+                "decode",
+                name,
+                OPs=qk_matmul_OPs,
+                load_weight=0,
+                load_act=(1) * head_size * batchsize * num_attention_heads * a_byte,
+                store_act=1 * seqlen * batchsize * num_attention_heads * a_byte,
+                load_kv_cache=(seqlen)
+                * head_size
+                * batchsize
+                * num_attention_heads
+                * kv_byte,
+                store_kv_cache=0,
+            )
+            name = f"sv_matmul"
+            self._analyze_to_results(
+                "decode",
+                name,
+                OPs=sv_matmul_OPs,
+                load_weight=0,
+                load_act=(1 * seqlen * batchsize * num_attention_heads) * a_byte,
+                store_act=1 * head_size * batchsize * num_attention_heads * a_byte,
+                load_kv_cache=(seqlen * head_size * batchsize * num_attention_heads)
+                * kv_byte,
+                store_kv_cache=0,
+            )
+
+            name = f"softmax"
+            # max sub exp sum div
+            self._analyze_to_results(
+                "decode",
+                name,
+                OPs=softmax_OPs,
+                load_weight=0,
+                load_act=batchsize * num_attention_heads * seqlen * 1 * a_byte,
+                store_act=batchsize * num_attention_heads * seqlen * 1 * a_byte,
+                load_kv_cache=0,
+                store_kv_cache=0,
+            )
 
         for name in ["attn_norm", "mlp_norm"]:
             # sum sub pow sum div mul add
@@ -238,57 +315,82 @@ class ModelAnalyzer:
             self._analyze_to_results(
                 "decode",
                 name,
-                OPs=batchsize * hidden_size * 1 *2,
+                OPs=batchsize * hidden_size * 1 * 2,
                 load_weight=0,
-                load_act=batchsize * hidden_size * 1 * a_byte *2,
+                load_act=batchsize * hidden_size * 1 * a_byte * 2,
                 store_act=batchsize * hidden_size * 1 * a_byte,
                 load_kv_cache=0,
                 store_kv_cache=0,
             )
 
         # for prefill
-        name = f"qk_matmul"
-        self._analyze_to_results(
-            "prefill",
-            name,
-            OPs=seqlen * seqlen * head_size * num_attention_heads * batchsize * 2,
-            load_weight=0,
-            load_act=0,
-            store_act=seqlen * seqlen * batchsize * num_attention_heads * a_byte,
-            load_kv_cache=seqlen
-            * head_size
-            * batchsize
-            * num_attention_heads
-            * 2
-            * kv_byte,
-            store_kv_cache=0,
-        )
-        name = f"sv_matmul"
-        self._analyze_to_results(
-            "prefill",
-            name,
-            OPs=seqlen * head_size * seqlen * num_attention_heads * batchsize * 2,
-            load_weight=0,
-            load_act=seqlen * seqlen * batchsize * num_attention_heads * a_byte,
-            store_act=seqlen * head_size * batchsize * num_attention_heads * a_byte,
-            load_kv_cache=seqlen
-            * head_size
-            * batchsize
-            * num_attention_heads
-            * kv_byte,
-            store_kv_cache=0,
-        )
-        name = f"softmax"
-        self._analyze_to_results(
-            "prefill",
-            name,
-            OPs=batchsize * num_attention_heads * seqlen * seqlen * 5,
-            load_weight=0,
-            load_act=batchsize * num_attention_heads * seqlen * seqlen * a_byte,
-            store_act=batchsize * num_attention_heads * seqlen * seqlen * a_byte,
-            load_kv_cache=0,
-            store_kv_cache=0,
-        )
+        qk_matmul_OPs = seqlen * seqlen * head_size * num_attention_heads * batchsize * 2
+        sv_matmul_OPs = seqlen * head_size * seqlen * num_attention_heads * batchsize * 2
+        softmax_OPs = batchsize * num_attention_heads * seqlen * seqlen * 5
+        if flashattention_kv_block_size:
+            name = f"fused_attention"
+            n_kv_blocks = math.ceil(
+                (seqlen * batchsize) / flashattention_kv_block_size
+            )
+            q_numel = seqlen * head_size * batchsize * num_attention_heads * a_byte
+            o_numel = seqlen * seqlen * batchsize * num_attention_heads * a_byte
+            self._analyze_to_results(
+                "prefill",
+                name,
+                OPs=qk_matmul_OPs + sv_matmul_OPs + softmax_OPs,
+                load_weight=0,
+                load_act=n_kv_blocks * q_numel + (n_kv_blocks - 1) * o_numel,
+                store_act=n_kv_blocks * o_numel,
+                load_kv_cache=(seqlen)
+                * head_size
+                * batchsize
+                * num_attention_heads
+                * kv_byte,
+                store_kv_cache=0,
+            )
+        else:
+            name = f"qk_matmul"
+            self._analyze_to_results(
+                "prefill",
+                name,
+                OPs=qk_matmul_OPs,
+                load_weight=0,
+                load_act=0,
+                store_act=seqlen * seqlen * batchsize * num_attention_heads * a_byte,
+                load_kv_cache=seqlen
+                * head_size
+                * batchsize
+                * num_attention_heads
+                * 2
+                * kv_byte,
+                store_kv_cache=0,
+            )
+            name = f"sv_matmul"
+            self._analyze_to_results(
+                "prefill",
+                name,
+                OPs=sv_matmul_OPs,
+                load_weight=0,
+                load_act=seqlen * seqlen * batchsize * num_attention_heads * a_byte,
+                store_act=seqlen * head_size * batchsize * num_attention_heads * a_byte,
+                load_kv_cache=seqlen
+                * head_size
+                * batchsize
+                * num_attention_heads
+                * kv_byte,
+                store_kv_cache=0,
+            )
+            name = f"softmax"
+            self._analyze_to_results(
+                "prefill",
+                name,
+                OPs=softmax_OPs,
+                load_weight=0,
+                load_act=batchsize * num_attention_heads * seqlen * seqlen * a_byte,
+                store_act=batchsize * num_attention_heads * seqlen * seqlen * a_byte,
+                load_kv_cache=0,
+                store_kv_cache=0,
+            )
         for name in ["attn_norm", "mlp_norm"]:
             self._analyze_to_results(
                 "prefill",
@@ -315,9 +417,9 @@ class ModelAnalyzer:
             self._analyze_to_results(
                 "prefill",
                 name,
-                OPs=batchsize * hidden_size * seqlen * 1 *2,
+                OPs=batchsize * hidden_size * seqlen * 1 * 2,
                 load_weight=0,
-                load_act=batchsize * hidden_size * seqlen * a_byte*2,
+                load_act=batchsize * hidden_size * seqlen * a_byte * 2,
                 store_act=batchsize * hidden_size * seqlen * a_byte,
                 load_kv_cache=0,
                 store_kv_cache=0,
@@ -346,30 +448,26 @@ class ModelAnalyzer:
         total_results["decode"]["memory_consumption"] = (
             decode_tmp_act + weight_kv_footprint
         )
-        total_results["decode"]["memory_consumption_tmp_act"] = (
-            decode_tmp_act
-        )
-        total_results["decode"]["memory_consumption_weight"] = (
-            total_results["prefill"]["load_weight"]
-        )
-        total_results["decode"]["memory_consumption_kv_cache"] = (
-            total_results["prefill"]["store_kv_cache"]
-        )
+        total_results["decode"]["memory_consumption_tmp_act"] = decode_tmp_act
+        total_results["decode"]["memory_consumption_weight"] = total_results["prefill"][
+            "load_weight"
+        ]
+        total_results["decode"]["memory_consumption_kv_cache"] = total_results[
+            "prefill"
+        ]["store_kv_cache"]
         prefill_tmp_act = 0
         for layer_name, result in self.results["prefill"].items():
             prefill_tmp_act += result["store_act"]
         total_results["prefill"]["memory_consumption"] = (
             prefill_tmp_act + weight_kv_footprint
         )
-        total_results["prefill"]["memory_consumption_tmp_act"] = (
-            prefill_tmp_act
-        )
-        total_results["prefill"]["memory_consumption_weight"] = (
-            total_results["prefill"]["load_weight"]
-        )
-        total_results["prefill"]["memory_consumption_kv_cache"] = (
-            total_results["prefill"]["store_kv_cache"]
-        )
+        total_results["prefill"]["memory_consumption_tmp_act"] = prefill_tmp_act
+        total_results["prefill"]["memory_consumption_weight"] = total_results[
+            "prefill"
+        ]["load_weight"]
+        total_results["prefill"]["memory_consumption_kv_cache"] = total_results[
+            "prefill"
+        ]["store_kv_cache"]
 
         # lm_head
         name = "lm_head"
@@ -396,11 +494,11 @@ class ModelAnalyzer:
         prefill_result = self.analyze(
             prompt_len + gen_len, batchsize, w_bit, a_bit, kv_bit
         )
-        inference_time=prefill_result["total_results"]["prefill"]["inference_time"]
+        inference_time = prefill_result["total_results"]["prefill"]["inference_time"]
         for i in range(prompt_len, prompt_len + gen_len):
             result = self.analyze(i, batchsize, w_bit, a_bit, kv_bit)
-            inference_time=result["total_results"]["decode"]["inference_time"]
-        return {"inference_time":inference_time}
+            inference_time = result["total_results"]["decode"]["inference_time"]
+        return {"inference_time": inference_time}
 
     def get_hardware_info(self):
         bandwidth = hardware_params[self.hardware]["bandwith"]

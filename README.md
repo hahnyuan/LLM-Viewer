@@ -12,7 +12,6 @@ In this paper, we provide a comprehensive analysis of the latest advancements in
 This ongoing project will be daily updated to add new features. Here is the TODO list:
 - Expand hardware platform compatibility and allow manual configuration of hardware parameters.
 - Increase support for more LLMs and enable manual configuration of model graphs.
-- Integrate FlashAttention analysis and other optimization techniques.
 
 ## Workflow
 

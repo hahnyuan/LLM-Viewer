@@ -96,7 +96,6 @@ const w_quant = ref('FP16');
 const a_quant = ref('FP16');
 const kv_quant = ref('FP16');
 
-// 当inference_stage改变时，更新InferenceConfig.step
 watch(inference_stage, (new_stage) => {
     console.log("inference_stage", new_stage)
     InferenceConfig.value.stage = new_stage
@@ -137,13 +136,11 @@ watch(kv_quant, (n) => {
 
 <style>
 .input_config {
-    /* 外边有一圈框框 */
     border: 1px solid #ccc;
     margin: 3px;
 }
 
 .hover_color {
-    /* 当鼠标悬停时，改变文字颜色 */
     color: #0000ff;
     cursor: pointer;
 }
