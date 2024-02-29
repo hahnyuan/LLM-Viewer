@@ -303,6 +303,11 @@ onMounted(() => {
         const node = item.getModel();
         clickNode(node);
     });
+    graph.on('node:touchstart', (event) => {
+        const { item } = event;
+        const node = item.getModel();
+        clickNode(node);
+    });
     graph.on('canvas:click', (event) => {
         release_select()
     });
