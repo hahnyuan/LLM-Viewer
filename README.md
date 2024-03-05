@@ -9,7 +9,7 @@ You can use LLM-Viewer in a web browser or as a command line interface (CLI) too
 We invite you to read our paper [LLM Inference Unveiled: Survey and Roofline Model Insights](https://arxiv.org/pdf/2402.16363.pdf).
 In this paper, we provide a comprehensive analysis of the latest advancements in efficient LLM inference using LLM-Viewer. 
 
-This ongoing project will be daily updated to add new features. Here is the TODO list:
+This ongoing project will be daily updated. TODO list:
 - Expand hardware platform compatibility and allow manual configuration of hardware parameters.
 - Increase support for more LLMs and enable manual configuration of model graphs.
 

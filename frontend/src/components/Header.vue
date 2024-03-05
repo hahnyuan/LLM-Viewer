@@ -55,7 +55,7 @@
             ↙ The Network-wise Analysis result is demonstrated in the left pannel.
         </p>
         <p>
-            We invite you to read our paper <a class="hover-bold" href="https://arxiv.org/pdf/2402.16363.pdf">LLM Inference Unveiled: Survey and Roofline Model Insights</a>.
+            We invite you to read our paper <a class="hover-bold" href="https://arxiv.org/pdf/2402.16363.pdf" target="_blank">LLM Inference Unveiled: Survey and Roofline Model Insights</a>.
             In this paper, we provide a comprehensive analysis of the latest advancements in efficient LLM inference using LLM-Viewer. 
         </p>
     </div>
