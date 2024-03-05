@@ -10,6 +10,7 @@ We invite you to read our paper [LLM Inference Unveiled: Survey and Roofline Mod
 In this paper, we provide a comprehensive analysis of the latest advancements in efficient LLM inference using LLM-Viewer. 
 
 This ongoing project will be daily updated. TODO list:
+- Show the whole network
 - Expand hardware platform compatibility and allow manual configuration of hardware parameters.
 - Increase support for more LLMs and enable manual configuration of model graphs.
 

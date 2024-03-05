@@ -507,7 +507,7 @@ class ModelAnalyzer:
         return {"inference_time": inference_time}
 
     def get_hardware_info(self):
-        bandwidth = hardware_params[self.hardware]["bandwith"]
+        bandwidth = hardware_params[self.hardware]["bandwidth"]
         if self.w_bit <= 8 and self.a_bit <= 8 and self.kv_bit <= 8:
             max_OPS = hardware_params[self.hardware]["INT8"]
         else:
