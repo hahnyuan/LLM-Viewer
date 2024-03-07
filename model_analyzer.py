@@ -258,7 +258,7 @@ class ModelAnalyzer:
                 load_kv_cache=(seqlen)
                 * head_size
                 * batchsize
-                * num_attention_heads
+                * num_key_value_heads
                 * kv_byte,
                 store_kv_cache=0,
             )
@@ -270,7 +270,7 @@ class ModelAnalyzer:
                 load_weight=0,
                 load_act=(1 * seqlen * batchsize * num_attention_heads) * a_byte,
                 store_act=1 * head_size * batchsize * num_attention_heads * a_byte,
-                load_kv_cache=(seqlen * head_size * batchsize * num_attention_heads)
+                load_kv_cache=(seqlen * head_size * batchsize * num_key_value_heads)
                 * kv_byte,
                 store_kv_cache=0,
             )
@@ -366,7 +366,7 @@ class ModelAnalyzer:
                 load_kv_cache=seqlen
                 * head_size
                 * batchsize
-                * num_attention_heads
+                * num_key_value_heads
                 * 2
                 * kv_byte,
                 store_kv_cache=0,
@@ -382,7 +382,7 @@ class ModelAnalyzer:
                 load_kv_cache=seqlen
                 * head_size
                 * batchsize
-                * num_attention_heads
+                * num_key_value_heads
                 * kv_byte,
                 store_kv_cache=0,
             )
