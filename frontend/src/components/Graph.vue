@@ -100,7 +100,7 @@ function graphUpdate() {
             graph_data.nodes.forEach(function (node) {
                 // update the node
                 graph.updateItem(node.id, {
-                    description: node.description,
+                    description: node.description, label: node.label
                 });
             });
         } else {

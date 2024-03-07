@@ -65,6 +65,7 @@ def get_model_graph(model_id, hardware, config_path, inference_config):
         }
     ]
     edges = []
+    GQA=analyzer.get_model_info()["GQA"]
 
     def write_to_node(name, OPs, memory_access, info, input_names=[]):
         node = {
@@ -73,6 +74,9 @@ def get_model_graph(model_id, hardware, config_path, inference_config):
             "description": f"OPs:{str_number(OPs)}, Access:{str_number(memory_access)}",
             "info": info,
         }
+        if GQA and name in ["qk_matmul",'sv_matmul']:
+            node["label"]+="(GQA)"
+        print(GQA,node)
         nodes.append(node)
         for input_name in input_names:
             edge = {"source": input_name, "target": name}

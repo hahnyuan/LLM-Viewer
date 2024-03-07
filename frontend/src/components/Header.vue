@@ -7,19 +7,11 @@
         |
         <span>Model: </span>
         <select v-model="select_model_id">
-            <!-- <option value="meta-llama/Llama-2-7b-hf">meta-llama/Llama-2-7b-hf</option>
-            <option value="meta-llama/Llama-2-13b-hf">meta-llama/Llama-2-13b-hf</option>
-            <option value="meta-llama/Llama-2-70b-hf">meta-llama/Llama-2-70b-hf</option> -->
-            <!-- <option value="ChatGLM">ChatGLM</option> -->
             <option v-for="model_id in avaliable_model_ids" :value="model_id">{{ model_id }}</option>
         </select>
         <span> | </span>
         <span>Hardware: </span>
         <select v-model="select_hardware">
-            <!-- <option value="nvidia_V100">nvidia_V100</option>
-            <option value="nvidia_A100">nvidia_A100</option>
-            <option value="nvidia_H100">nvidia_H100</option> -->
-            <!-- <option value="ChatGLM">ChatGLM</option> -->
             <option v-for="hardware in avaliable_hardwares" :value="hardware">{{ hardware }}</option>
         </select>
     </div>

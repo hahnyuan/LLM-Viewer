@@ -514,3 +514,14 @@ class ModelAnalyzer:
             max_OPS = hardware_params[self.hardware]["FP16"]
         onchip_buffer = hardware_params[self.hardware]["onchip_buffer"]
         return bandwidth, max_OPS, onchip_buffer
+
+    def get_model_info(self):
+        if self.config.get_num_attention_heads(self.model_params)!=self.config.get_num_key_value_heads(self.model_params):
+            GQA=True
+        else:
+            GQA=False
+        
+        info={
+            "GQA": GQA # group query attention
+        }
+        return info
