@@ -494,18 +494,6 @@ class ModelAnalyzer:
         self.results["total_results"] = total_results
         return self.results
 
-    def analyze_generate_task(
-        self, prompt_len, gen_len, batchsize, w_bit=16, a_bit=16, kv_bit=None
-    ):
-        prefill_result = self.analyze(
-            prompt_len + gen_len, batchsize, w_bit, a_bit, kv_bit
-        )
-        inference_time = prefill_result["total_results"]["prefill"]["inference_time"]
-        for i in range(prompt_len, prompt_len + gen_len):
-            result = self.analyze(i, batchsize, w_bit, a_bit, kv_bit)
-            inference_time = result["total_results"]["decode"]["inference_time"]
-        return {"inference_time": inference_time}
-
     def get_hardware_info(self):
         bandwidth = hardware_params[self.hardware]["bandwidth"]
         if self.w_bit <= 8 and self.a_bit <= 8 and self.kv_bit <= 8:

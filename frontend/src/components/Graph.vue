@@ -31,6 +31,7 @@
 
 <script setup>
 import G6 from "@antv/g6"
+
 import { onMounted, onBeforeUpdate, provide } from 'vue'
 import { watch, inject, ref } from 'vue'
 import { graph_config } from "./graphs/graph_config.js"
@@ -38,6 +39,7 @@ import { graph_config } from "./graphs/graph_config.js"
 import axios from 'axios'
 import { strNumber, strNumberTime } from '@/utils.js';
 import { Chart, registerables } from 'chart.js';
+
 import annotationPlugin from 'chartjs-plugin-annotation';
 
 const model_id = inject('model_id')
