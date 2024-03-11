@@ -1,29 +1,27 @@
-from transformers import OPTForCausalLM
+def get_num_attention_heads(model_params):
+    return getattr(model_params, "num_attention_heads")
 
-def get_num_attention_heads(config):
-    return getattr(config, "num_attention_heads")
+def get_hidden_size(model_params):
+    return getattr(model_params, "hidden_size")
 
-def get_hidden_size(config):
-    return getattr(config, "hidden_size")
+def get_num_key_value_heads(model_params):
+    return getattr(model_params, "num_attention_heads")
 
-def get_num_key_value_heads(config):
-    return getattr(config, "num_attention_heads")
+def get_num_hidden_layers(model_params):
+    return getattr(model_params, "num_hidden_layers")
 
-def get_num_hidden_layers(config):
-    return getattr(config, "num_hidden_layers")
+def get_intermediate_size(model_params):
+    return getattr(model_params, "ffn_dim")
 
-def get_intermediate_size(config):
-    return getattr(config, "ffn_dim")
-
-def get_vocab_size(config):
-    return getattr(config, "vocab_size")
+def get_vocab_size(model_params):
+    return getattr(model_params, "vocab_size")
 
 
-def get_linear_layers(config):
-    hidden_size=get_hidden_size(config)
-    intermediate_size=get_intermediate_size(config)
-    key_value_heads=get_num_key_value_heads(config)
-    attention_heads=get_num_attention_heads(config)
+def get_linear_layers(model_params):
+    hidden_size=get_hidden_size(model_params)
+    intermediate_size=get_intermediate_size(model_params)
+    key_value_heads=get_num_key_value_heads(model_params)
+    attention_heads=get_num_attention_heads(model_params)
     return {
         "q_proj":[hidden_size, hidden_size],
         "k_proj":[hidden_size, hidden_size*key_value_heads/attention_heads],

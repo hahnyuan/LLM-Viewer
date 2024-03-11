@@ -13,6 +13,11 @@ npm install
 ```sh
 npm run dev
 ```
+or
+```sh
+npm run build
+npm run preview
+```
 
 ### Compile and Minify for Production
 

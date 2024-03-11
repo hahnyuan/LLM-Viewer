@@ -258,7 +258,7 @@ class ModelAnalyzer:
                 load_kv_cache=(seqlen)
                 * head_size
                 * batchsize
-                * num_attention_heads
+                * num_key_value_heads
                 * kv_byte,
                 store_kv_cache=0,
             )
@@ -270,7 +270,7 @@ class ModelAnalyzer:
                 load_weight=0,
                 load_act=(1 * seqlen * batchsize * num_attention_heads) * a_byte,
                 store_act=1 * head_size * batchsize * num_attention_heads * a_byte,
-                load_kv_cache=(seqlen * head_size * batchsize * num_attention_heads)
+                load_kv_cache=(seqlen * head_size * batchsize * num_key_value_heads)
                 * kv_byte,
                 store_kv_cache=0,
             )
@@ -366,7 +366,7 @@ class ModelAnalyzer:
                 load_kv_cache=seqlen
                 * head_size
                 * batchsize
-                * num_attention_heads
+                * num_key_value_heads
                 * 2
                 * kv_byte,
                 store_kv_cache=0,
@@ -382,7 +382,7 @@ class ModelAnalyzer:
                 load_kv_cache=seqlen
                 * head_size
                 * batchsize
-                * num_attention_heads
+                * num_key_value_heads
                 * kv_byte,
                 store_kv_cache=0,
             )
@@ -514,3 +514,14 @@ class ModelAnalyzer:
             max_OPS = hardware_params[self.hardware]["FP16"]
         onchip_buffer = hardware_params[self.hardware]["onchip_buffer"]
         return bandwidth, max_OPS, onchip_buffer
+
+    def get_model_info(self):
+        if self.config.get_num_attention_heads(self.model_params)!=self.config.get_num_key_value_heads(self.model_params):
+            GQA=True
+        else:
+            GQA=False
+        
+        info={
+            "GQA": GQA # group query attention
+        }
+        return info

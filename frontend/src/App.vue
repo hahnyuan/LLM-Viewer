@@ -1,4 +1,10 @@
 <script setup>
+// import { defineAsyncComponent } from 'vue'
+
+// const Graph = defineAsyncComponent(() =>
+//   import('./components/Graph.vue')
+// )
+
 import Graph from "./components/Graph.vue"
 import LeftPannel from "./components/LeftPannel.vue"
 import Header from "./components/Header.vue"
@@ -21,6 +27,7 @@ const global_inference_config = ref({
   "stage": "decode", 
   batch_size: 1, 
   seq_length: 1024, 
+  gen_length: 1,
   w_quant: "FP16", 
   a_quant: "FP16", 
   kv_quant: "FP16", 

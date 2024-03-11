@@ -20,11 +20,11 @@ def get_intermediate_size(model_params):
 def get_vocab_size(model_params):
     return getattr(model_params, "vocab_size")
 
-def get_linear_layers(config):
-    hidden_size=get_hidden_size(config)
-    intermediate_size=get_intermediate_size(config)
-    key_value_heads=get_num_key_value_heads(config)
-    attention_heads=get_num_attention_heads(config)
+def get_linear_layers(model_params):
+    hidden_size=get_hidden_size(model_params)
+    intermediate_size=get_intermediate_size(model_params)
+    key_value_heads=get_num_key_value_heads(model_params)
+    attention_heads=get_num_attention_heads(model_params)
     return {
         "q_proj":[hidden_size, hidden_size],
         "k_proj":[hidden_size, hidden_size*key_value_heads/attention_heads],

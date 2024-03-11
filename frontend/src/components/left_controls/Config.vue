@@ -6,17 +6,31 @@
         <label for="decode">Decode</label>
         <input type="radio" v-model="inference_stage" id="prefill" value="prefill">
         <label for="prefill">Prefill</label>
+        <input type="radio" v-model="inference_stage" id="chat" value="chat">
+        <label for="prefill">Chat</label>
     </div>
     <div class="config_div">
         Batchsize:
         <input type="range" min="1" max="256" value="1" v-model.lazy="batch_size">
         <input type="number" v-model.lazy="batch_size" min="1" max="256">
     </div>
-    <div class="config_div">
+    <!-- <div class="config_div" v-if="inference_stage!=chat"> -->
+    <div class="config_div" v-if="inference_stage!='chat'">
         SeqLength:
         <input type="range" min="1" max="4096" value="1024" v-model.lazy="seq_length">
         <!-- <span id="seq_length">1024</span> -->
         <input type="number" v-model.lazy="seq_length" min="1" max="4096">
+    </div>
+    <div class="config_div" v-else>
+        PromptLength:
+        <input type="range" min="1" max="4096" value="1024" v-model.lazy="seq_length">
+        <!-- <span id="seq_length">1024</span> -->
+        <input type="number" v-model.lazy="seq_length" min="1" max="4096">
+        <br/>
+        GenerateLength:
+        <input type="range" min="1" max="4096" value="1024" v-model.lazy="gen_length">
+        <!-- <span id="seq_length">1024</span> -->
+        <input type="number" v-model.lazy="gen_length" min="1" max="4096">
     </div>
     <!-- <div class="config_div">
         Generation Length:
@@ -64,16 +78,16 @@
         </select>
     </div> -->
     <h2>Network-wise Analysis</h2>
-    <div v-if="inference_stage=='decode'">
-        <h3>Decode</h3>
-        <div v-for="(value, key) in total_results['decode']" :key="key" class="network-wise-info-item">
+    <div>
+        <h3>{{ inference_stage }}</h3>
+        <div v-for="(value, key) in total_results[inference_stage]" :key="key" class="network-wise-info-item">
             <span v-if="['bound'].includes(key)">{{ key }}: {{ value }}</span>
             <span v-else-if="['inference_time'].includes(key)">{{ key }}: {{ strNumberTime(value) }}</span>
             <span v-else>{{ key }}: {{ strNumber(value) }}</span>
         </div>
         
     </div>
-    <div v-if="inference_stage=='prefill'">
+    <!-- <div v-if="inference_stage=='prefill'">
         <h3>Prefill</h3>
         <div v-for="(value, key) in total_results['prefill']" :key="key" class="network-wise-info-item">
             <span v-if="['bound'].includes(key)">{{ key }}: {{ value }}</span>
@@ -81,6 +95,14 @@
             <span v-else>{{ key }}: {{ strNumber(value) }}</span>
         </div>
     </div>
+    <div v-if="inference_stage=='chat'">
+        <h3>Prefill</h3>
+        <div v-for="(value, key) in total_results['chat']" :key="key" class="network-wise-info-item">
+            <span v-if="['bound'].includes(key)">{{ key }}: {{ value }}</span>
+            <span v-else-if="['inference_time'].includes(key)">{{ key }}: {{ strNumberTime(value) }}</span>
+            <span v-else>{{ key }}: {{ strNumber(value) }}</span>
+        </div>
+    </div> -->
 </template>
 
 <script setup>
@@ -96,6 +118,7 @@ const total_results = inject('total_results');
 const inference_stage = ref('decode');
 const batch_size = ref(1);
 const seq_length = ref(1024);
+const gen_length = ref(1);
 const w_quant = ref('FP16');
 const a_quant = ref('FP16');
 const kv_quant = ref('FP16');
@@ -143,6 +166,11 @@ watch(use_flashattention, (n) => {
     global_update_trigger.value += 1
 })
 
+watch(gen_length, (n) => {
+    console.log("gen_length", n)
+    global_inference_config.value.gen_length = n
+    global_update_trigger.value += 1
+})
 
 </script>
 
