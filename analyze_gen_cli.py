@@ -24,7 +24,8 @@ args = parser.parse_args()
 
 
 analyzer=ModelAnalyzer(args.model_id,args.hardware,args.config_file)
-ret = analyzer.analyze_generate_task(args.promptlen, args.seqlen, args.batchsize, args.w_bit, args.a_bit, args.kv_bit)
+ret = analyzer.analyze_generate_task(args.promptlen, args.seqlen, args.batchsize, args.w_bit, args.a_bit, args.kv_bit, args.use_flashattention)
+ret = analyzer.analyze_generate_task(args.promptlen, args.seqlen, args.batchsize, args.w_bit, args.a_bit, args.kv_bit, args.use_flashattention)
 elapse = ret["inference_time"]
 prefill_elapse = ret["prefill_time"]
 print(f"{args.hardware}: 1st token latency {prefill_elapse}, total latency {elapse}, throughput {args.seqlen * args.batchsize / elapse} Token/sec")
