@@ -50,6 +50,10 @@ python3 analyze_cli.py meta-llama/Llama-2-13b-hf nvidia_A6000 --batchsize 16 --s
 python3 analyze_cli.py meta-llama/Llama-2-13b-hf nvidia_A6000 --batchsize 1 --seqlen 8192
 ```
 
+NOTE: The time estimated by the roofline model represents the theoretical performance that the hardware can achieve. 
+The purpose of creating this tool is to help readers gain a clearer understanding of the key factors that influence LLM inference. 
+Only the relative relationships can be referenced. 
+
 ## Citation
 
 If you are using LLM-Viewer in your research, please cite our paper:

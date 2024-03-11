@@ -79,7 +79,12 @@
     </div> -->
     <h2>Network-wise Analysis</h2>
     <div>
+        
+        <p>NOTE: The time estimated by the roofline model represents the theoretical performance that the hardware can achieve. 
+        The purpose of creating this tool is to help readers gain a clearer understanding of the key factors that influence LLM inference. 
+        Only the relative relationships can be referenced. </p>
         <h3>{{ inference_stage }}</h3>
+        
         <div v-for="(value, key) in total_results[inference_stage]" :key="key" class="network-wise-info-item">
             <span v-if="['bound'].includes(key)">{{ key }}: {{ value }}</span>
             <span v-else-if="['inference_time'].includes(key)">{{ key }}: {{ strNumberTime(value) }}</span>
