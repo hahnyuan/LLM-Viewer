@@ -5,6 +5,7 @@ from hardwares.hardware_params import hardware_params
 from model_analyzer import ModelAnalyzer
 from utils import str_number
 import numpy as np
+import re
 
 config_cache = {}
 
@@ -31,6 +32,9 @@ def get_quant_bit(dtype):
         return 8
     elif dtype == "INT4":
         return 4
+    elif 'bit' in dtype:
+        bitwidth=int(re.findall(r'\d+', dtype)[0])
+        return bitwidth
     else:
         raise ValueError(f"Unsupported dtype:{dtype}")
 

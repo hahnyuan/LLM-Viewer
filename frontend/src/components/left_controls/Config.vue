@@ -42,24 +42,30 @@
         Weight Quantization:
         <select v-model="w_quant">
             <option value="FP16">FP16</option>
-            <option value="INT8">INT8</option>
-            <option value="INT4">INT4</option>
+            <option value="8-bit">8-bit</option>
+            <option value="4-bit">4-bit</option>
+            <option value="2-bit">2-bit</option>
+            <option value="1-bit">1-bit</option>
         </select>
     </div>
     <div class="config_div">
         Activation Quantization
         <select v-model="a_quant">
             <option value="FP16">FP16</option>
-            <option value="INT8">INT8</option>
-            <option value="INT4">INT4</option>
+            <option value="8-bit">8-bit</option>
+            <option value="4-bit">4-bit</option>
+            <option value="2-bit">2-bit</option>
+            <option value="1-bit">1-bit</option>
         </select>
     </div>
     <div class="config_div">
         KV Cache Quantization
         <select v-model="kv_quant">
             <option value="FP16">FP16</option>
-            <option value="INT8">INT8</option>
-            <option value="INT4">INT4</option>
+            <option value="8-bit">8-bit</option>
+            <option value="4-bit">4-bit</option>
+            <option value="2-bit">2-bit</option>
+            <option value="1-bit">1-bit</option>
         </select>
     </div>
     <div class="config_div">

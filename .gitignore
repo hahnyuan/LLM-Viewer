@@ -1,3 +1,4 @@
 output
 tmp
 *.pyc
+.vscode
