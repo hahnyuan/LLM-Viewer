@@ -1,5 +1,6 @@
+
 def get_num_attention_heads(model_params):
-    return getattr(model_params, "num_attention_heads")
+    return getattr(model_params, "num_heads")
 
 
 def get_hidden_size(model_params):
@@ -7,40 +8,21 @@ def get_hidden_size(model_params):
 
 
 def get_num_key_value_heads(model_params):
-    return getattr(model_params, "num_attention_heads")
+    return getattr(model_params, "num_heads")
 
 
 def get_num_hidden_layers(model_params):
-    return getattr(model_params, "num_hidden_layers")
-
+    return getattr(model_params, "depth")
 
 def get_intermediate_size(model_params):
-    return getattr(model_params, "ffn_dim")
-
-
-def get_vocab_size(model_params):
-    return getattr(model_params, "vocab_size")
-
-def post_process(model_params,args):
-    hiddensize=get_hidden_size(model_params)
-    vocab_size=get_vocab_size(model_params)
-    layers=[]
-    for stage in ["prefill", "decode"]:
-        layers.append({
-            'name': 'lm_head',
-            'stage':stage,
-            'OPs':args['batchsize']*hiddensize*vocab_size*1,
-            'load_weight':hiddensize*vocab_size *args['w_byte'],
-            'load_act':hiddensize*args['a_byte'],
-            'store_act':vocab_size*args['a_byte'],
-        })
-    return layers
+    mlp_ratio=getattr(model_params, "mlp_ratio", 4.0)
+    return getattr(model_params, "hidden_size")*mlp_ratio
 
 def get_linear_layers(model_params):
-    hidden_size = get_hidden_size(model_params)
-    intermediate_size = get_intermediate_size(model_params)
-    key_value_heads = get_num_key_value_heads(model_params)
-    attention_heads = get_num_attention_heads(model_params)
+    hidden_size=get_hidden_size(model_params)
+    intermediate_size=get_intermediate_size(model_params)
+    key_value_heads=get_num_key_value_heads(model_params)
+    attention_heads=get_num_attention_heads(model_params)
     return {
         "q_proj": [hidden_size, hidden_size],
         "k_proj": [hidden_size, hidden_size * key_value_heads / attention_heads],
@@ -51,6 +33,8 @@ def get_linear_layers(model_params):
         "down_proj": [intermediate_size, hidden_size],
     }
 
+def post_process(model_params,args):
+    return []
 
 transformer_layer_graph = {
     "input": [],

@@ -11,7 +11,7 @@ import Header from "./components/Header.vue"
 import { ref, computed, provide } from 'vue';
 
 const model_id = ref("meta-llama/Llama-2-7b-hf");
-const hardware = ref("nvidia_V100");
+const hardware = ref("nvidia_A6000");
 const global_update_trigger = ref(1);
 const total_results = ref({});
 const ip_port = ref("api.llm-viewer.com:5000");

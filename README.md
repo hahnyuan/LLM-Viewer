@@ -9,7 +9,8 @@ You can use LLM-Viewer in a web browser or as a command line interface (CLI) too
 We invite you to read our paper [LLM Inference Unveiled: Survey and Roofline Model Insights](https://arxiv.org/pdf/2402.16363.pdf).
 In this paper, we provide a comprehensive analysis of the latest advancements in efficient LLM inference using LLM-Viewer. 
 
-This ongoing project will be daily updated. TODO list:
+This ongoing project will be updated. TODO list:
+- pre-process and post-process for non-transformer layers
 - Show the whole network
 - Expand hardware platform compatibility and allow manual configuration of hardware parameters.
 - Increase support for more LLMs and enable manual configuration of model graphs.
@@ -39,7 +40,7 @@ Clone the LLM-Viewer repository from GitHub:
 ```git clone https://github.com/hahnyuan/LLM-Viewer.git   ```
 
 Install requirements
-```pip install transformers flask flask_cors```
+```pip install transformers flask flask_cors easydict```
 
 To analyze an LLM using LLM-Viewer in command line interface (cli), run the following command:
 
@@ -48,6 +49,9 @@ python3 analyze_cli.py facebook/opt-125m nvidia_A6000
 python3 analyze_cli.py meta-llama/Llama-2-7b-hf nvidia_A6000 --batchsize 1 --seqlen 2048
 python3 analyze_cli.py meta-llama/Llama-2-13b-hf nvidia_A6000 --batchsize 16 --seqlen 2048
 python3 analyze_cli.py meta-llama/Llama-2-13b-hf nvidia_A6000 --batchsize 1 --seqlen 8192
+
+# DiT models
+python3 analyze_cli.py DiT-XL/2 nvidia_A6000 --batchsize 1 --seqlen 256 --source DiT
 ```
 
 NOTE: The time estimated by the roofline model represents the theoretical performance that the hardware can achieve. 

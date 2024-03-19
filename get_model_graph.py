@@ -6,6 +6,7 @@ from model_analyzer import ModelAnalyzer
 from utils import str_number
 import numpy as np
 import re
+from backend_settings import avaliable_model_ids_sources
 
 config_cache = {}
 
@@ -13,7 +14,12 @@ config_cache = {}
 def get_analyer(model_id, hardware, config_path) -> ModelAnalyzer:
     config = f"{model_id}_{hardware}_{config_path}"
     if config not in config_cache:
-        config_cache[config] = ModelAnalyzer(model_id, hardware, config_path)
+        config_cache[config] = ModelAnalyzer(
+            model_id,
+            hardware,
+            config_path,
+            source=avaliable_model_ids_sources[model_id]["source"],
+        )
     return config_cache[config]
 
 
@@ -32,13 +38,11 @@ def get_quant_bit(dtype):
         return 8
     elif dtype == "INT4":
         return 4
-    elif 'bit' in dtype:
-        bitwidth=int(re.findall(r'\d+', dtype)[0])
+    elif "bit" in dtype:
+        bitwidth = int(re.findall(r"\d+", dtype)[0])
         return bitwidth
     else:
         raise ValueError(f"Unsupported dtype:{dtype}")
-
-
 
 
 def get_model_graph(model_id, hardware, config_path, inference_config):
@@ -59,7 +63,7 @@ def get_model_graph(model_id, hardware, config_path, inference_config):
         w_bit=w_bit,
         a_bit=a_bit,
         kv_bit=kv_bit,
-        use_flashattention=use_flashattention
+        use_flashattention=use_flashattention,
     )
     bandwidth, max_OPS, onchip_buffer = analyzer.get_hardware_info()
     GQA = analyzer.get_model_info()["GQA"]
@@ -76,6 +80,7 @@ def get_model_graph(model_id, hardware, config_path, inference_config):
         }
     ]
     edges = []
+
     def write_to_node(name, OPs, memory_access, info, input_names=[]):
         node = {
             "label": name,
@@ -90,20 +95,17 @@ def get_model_graph(model_id, hardware, config_path, inference_config):
             edge = {"source": input_name, "target": name}
             edges.append(edge)
 
-    
-    
-
     if use_flashattention:
         layer_graph = analyzer.config.flashattention_transformer_layer_graph
     else:
         layer_graph = analyzer.config.transformer_layer_graph
     stage = inference_config["stage"]
     total_results = result["total_results"]
-    if stage != 'chat':
+    if stage != "chat":
         result = result[stage]
     else:
         result = result["prefill"]
-    
+
     for name, input_names in layer_graph.items():
         if name in ["input", "output"]:
             OPs = 0
@@ -114,25 +116,31 @@ def get_model_graph(model_id, hardware, config_path, inference_config):
             memory_access = result[name]["memory_access"]
             info = result[name]
         write_to_node(name, OPs, memory_access, info, input_names)
-    if stage=='chat':
+    if stage == "chat":
         # seq_length:seq_length+gen_length
-        total_results["chat"]=total_results["prefill"]
-        n_divide=min(10,gen_length)
-        for lengthi in np.linspace(seq_length+1, seq_length+gen_length, n_divide):
+        total_results["chat"] = total_results["prefill"]
+        n_divide = min(10, gen_length)
+        for lengthi in np.linspace(seq_length + 1, seq_length + gen_length, n_divide):
             gen_result = analyzer.analyze(
                 seqlen=lengthi,
                 batchsize=batch_size,
                 w_bit=w_bit,
                 a_bit=a_bit,
                 kv_bit=kv_bit,
-                use_flashattention=use_flashattention
+                use_flashattention=use_flashattention,
             )
-            for k,v in gen_result["total_results"]["decode"].items():
-                total_results["chat"][k] += v*gen_length/n_divide
+            for k, v in gen_result["total_results"]["decode"].items():
+                total_results["chat"][k] += v * gen_length / n_divide
             for name, input_names in layer_graph.items():
                 if name in gen_result["decode"]:
-                    result[name]["OPs"]+=gen_result["decode"][name]["OPs"]*gen_length/n_divide
-                    result[name]["memory_access"]+=gen_result["decode"][name]["memory_access"]*gen_length/n_divide
+                    result[name]["OPs"] += (
+                        gen_result["decode"][name]["OPs"] * gen_length / n_divide
+                    )
+                    result[name]["memory_access"] += (
+                        gen_result["decode"][name]["memory_access"]
+                        * gen_length
+                        / n_divide
+                    )
         for name, input_names in layer_graph.items():
             if name in ["input", "output"]:
                 OPs = 0

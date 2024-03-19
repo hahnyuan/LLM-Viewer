@@ -19,7 +19,10 @@ ALL_DATA_NAMES = [
 
 
 class ModelAnalyzer:
-    def __init__(self, model_id, hardware, config_file=None):
+    def __init__(self, model_id, hardware, config_file=None, source="huggingface"):
+        """
+        source: 'huggingface' or 'DiT'
+        """
         self.model_id = model_id
         self.hardware = hardware
         if config_file is None:
@@ -34,7 +37,16 @@ class ModelAnalyzer:
             config_file is not None
         ), "config file is not found, please specify it manually."
         print(f"use config file {config_file} for {model_id}")
-        self.model_params = AutoConfig.from_pretrained(model_id, trust_remote_code=True)
+        if source == "huggingface":
+            self.model_params = AutoConfig.from_pretrained(
+                model_id, trust_remote_code=True
+            )
+        else:
+            if not os.path.exists(f"model_params/{source}.py"):
+                raise Exception(f"model_params/{source}.py is not found")
+            # from model_params.DiT import model_params
+            module=importlib.import_module(f"model_params.{source}")
+            self.model_params = module.model_params[model_id]
         self.config = importlib.import_module(
             config_file.replace("/", ".").replace(".py", "")
         )
@@ -50,13 +62,13 @@ class ModelAnalyzer:
     def _analyze_to_results(
         self,
         stage,
-        layer_name,
-        OPs,
-        load_weight,
-        load_act,
-        store_act,
-        load_kv_cache,
-        store_kv_cache,
+        name,
+        OPs=0,
+        load_weight=0,
+        load_act=0,
+        store_act=0,
+        load_kv_cache=0,
+        store_kv_cache=0,
     ):
 
         bandwidth, max_OPS, onchip_buffer = self.get_hardware_info()
@@ -67,7 +79,7 @@ class ModelAnalyzer:
             bandwidth, max_OPS, OPs, memory_access
         )
         inference_time = OPs / performance
-        self.results[stage][layer_name] = {
+        self.results[stage][name] = {
             "OPs": OPs,
             "memory_access": memory_access,
             "arithmetic_intensity": arithmetic_intensity,
@@ -187,7 +199,6 @@ class ModelAnalyzer:
         hidden_size = config.get_hidden_size(model_params)
         num_key_value_heads = config.get_num_key_value_heads(model_params)
         num_hidden_layers = config.get_num_hidden_layers(model_params)
-        vocab_size = config.get_vocab_size(model_params)
 
         for name, (ic, oc) in config.get_linear_layers(model_params).items():
             # for linear layers
@@ -227,8 +238,10 @@ class ModelAnalyzer:
             name = f"fused_attention"
             bandwidth, max_OPS, onchip_buffer = self.get_hardware_info()
             # flashattention-2 https://arxiv.org/pdf/2307.08691.pdf
-            block_size_r=min(math.ceil(onchip_buffer / (kv_byte * head_size)),head_size)
-            n_blocks_r = math.ceil(1/block_size_r)
+            block_size_r = min(
+                math.ceil(onchip_buffer / (kv_byte * head_size)), head_size
+            )
+            n_blocks_r = math.ceil(1 / block_size_r)
             q_numel = (1) * head_size * batchsize * num_attention_heads * a_byte
             o_numel = 1 * seqlen * batchsize * num_attention_heads * a_byte
             self._analyze_to_results(
@@ -236,9 +249,10 @@ class ModelAnalyzer:
                 name,
                 OPs=qk_matmul_OPs + sv_matmul_OPs + softmax_OPs,
                 load_weight=0,
-                load_act= q_numel,
-                store_act=o_numel*2, # initialize O and save O
-                load_kv_cache=n_blocks_r*(seqlen)
+                load_act=q_numel,
+                store_act=o_numel * 2,  # initialize O and save O
+                load_kv_cache=n_blocks_r
+                * (seqlen)
                 * head_size
                 * batchsize
                 * num_attention_heads
@@ -336,8 +350,10 @@ class ModelAnalyzer:
             name = f"fused_attention"
             bandwidth, max_OPS, onchip_buffer = self.get_hardware_info()
             # flashattention-2 https://arxiv.org/pdf/2307.08691.pdf
-            block_size_r=min(math.ceil(onchip_buffer / (kv_byte * head_size)),head_size)
-            n_blocks_r = math.ceil(seqlen/block_size_r)
+            block_size_r = min(
+                math.ceil(onchip_buffer / (kv_byte * head_size)), head_size
+            )
+            n_blocks_r = math.ceil(seqlen / block_size_r)
             q_numel = seqlen * head_size * batchsize * num_attention_heads * a_byte
             o_numel = seqlen * seqlen * batchsize * num_attention_heads * a_byte
             self._analyze_to_results(
@@ -345,9 +361,10 @@ class ModelAnalyzer:
                 name,
                 OPs=qk_matmul_OPs + sv_matmul_OPs + softmax_OPs,
                 load_weight=0,
-                load_act= q_numel,
-                store_act=o_numel*2, # initialize O and save O
-                load_kv_cache=n_blocks_r*(seqlen)
+                load_act=q_numel,
+                store_act=o_numel * 2,  # initialize O and save O
+                load_kv_cache=n_blocks_r
+                * (seqlen)
                 * head_size
                 * batchsize
                 * num_attention_heads
@@ -477,19 +494,29 @@ class ModelAnalyzer:
 
         # lm_head
         name = "lm_head"
-        for stage in ["prefill", "decode"]:
+        args={
+            'batchsize':batchsize,
+            'a_byte':a_byte,
+            'w_byte':w_byte
+        }
+        for layer_info in self.config.post_process(self.model_params, args):
             self._analyze_to_results(
-                stage,
-                name,
-                OPs=batchsize * hidden_size * vocab_size * 1,
-                load_weight=hidden_size * vocab_size,
-                load_act=hidden_size * a_byte,
-                store_act=vocab_size * a_byte,
-                load_kv_cache=0,
-                store_kv_cache=0,
-            )
+                **layer_info)
             for data_name in ALL_DATA_NAMES:
-                total_results[stage][data_name] += self.results[stage][name][data_name]
+                total_results[layer_info['stage']][data_name] += self.results[layer_info['stage']][layer_info['name']][data_name]
+        # for stage in ["prefill", "decode"]:
+        #     self._analyze_to_results(
+        #         stage,
+        #         name,
+        #         OPs=batchsize * hidden_size * vocab_size * 1,
+        #         load_weight=hidden_size * vocab_size,
+        #         load_act=hidden_size * a_byte,
+        #         store_act=vocab_size * a_byte,
+        #         load_kv_cache=0,
+        #         store_kv_cache=0,
+        #     )
+        #     for data_name in ALL_DATA_NAMES:
+        #         total_results[stage][data_name] += self.results[stage][name][data_name]
 
         self.results["total_results"] = total_results
         return self.results
@@ -497,9 +524,7 @@ class ModelAnalyzer:
     def analyze_generate_task(
         self, prompt_len, gen_len, batchsize, w_bit=16, a_bit=16, kv_bit=None
     ):
-        prefill_result = self.analyze(
-            prompt_len, batchsize, w_bit, a_bit, kv_bit
-        )
+        prefill_result = self.analyze(prompt_len, batchsize, w_bit, a_bit, kv_bit)
         inference_time = prefill_result["total_results"]["prefill"]["inference_time"]
         for i in range(prompt_len, prompt_len + gen_len):
             result = self.analyze(i, batchsize, w_bit, a_bit, kv_bit)
@@ -516,12 +541,12 @@ class ModelAnalyzer:
         return bandwidth, max_OPS, onchip_buffer
 
     def get_model_info(self):
-        if self.config.get_num_attention_heads(self.model_params)!=self.config.get_num_key_value_heads(self.model_params):
-            GQA=True
+        if self.config.get_num_attention_heads(
+            self.model_params
+        ) != self.config.get_num_key_value_heads(self.model_params):
+            GQA = True
         else:
-            GQA=False
-        
-        info={
-            "GQA": GQA # group query attention
-        }
+            GQA = False
+
+        info = {"GQA": GQA}  # group query attention
         return info
