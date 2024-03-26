@@ -49,6 +49,8 @@ const global_inference_config = inject('global_inference_config')
 const ip_port = inject('ip_port')
 const total_results = inject('total_results')
 var hardware_info = {}
+var nowFocusNode = null
+var nowFocusNodePrevColor = null
 
 
 var graph = null;
@@ -106,6 +108,7 @@ function graphUpdate() {
                 });
             });
         } else {
+            nowFocusNode=null
             graph.clear()
             graph.data(graph_data)
             graph.render()
@@ -153,10 +156,10 @@ function handleSearch(newText, oldText) {
 }
 watch(searchText, handleSearch)
 
-var nowFocusNode = null
-var nowFocusNodePrevColor = null
+
 function SelectNode(nodeId, moveView = false) {
     if (moveView) {
+        console.log("graph.focusItem", nodeId)
         graph.focusItem(nodeId, true)
     }
     if (nowFocusNode) {

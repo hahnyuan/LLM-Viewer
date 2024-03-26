@@ -131,6 +131,7 @@ class ModelAnalyzer:
         a_bit=16,
         kv_bit=None,
         use_flashattention=False,
+        kv_token_ratio=1,
     ):
         """
         seqlen: sequence length
@@ -139,6 +140,7 @@ class ModelAnalyzer:
         a_bit: activation bit
         kv_bit: key and value bit. if it is None, it will be the same as a_bit
         use_flashattention: use flash attention/flash decoding
+        kv_token_ratio: use this for KV compression
 
         return is a dict with the following format:
         {
