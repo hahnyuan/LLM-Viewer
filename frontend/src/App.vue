@@ -28,6 +28,7 @@ const global_inference_config = ref({
   batch_size: 1, 
   seq_length: 1024, 
   gen_length: 1,
+  n_parallel_decode: 1,
   w_quant: "FP16", 
   a_quant: "FP16", 
   kv_quant: "FP16", 

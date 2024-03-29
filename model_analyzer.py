@@ -131,7 +131,7 @@ class ModelAnalyzer:
         a_bit=16,
         kv_bit=None,
         use_flashattention=False,
-        kv_token_ratio=1,
+        n_parallel_decode=1,
     ):
         """
         seqlen: sequence length
@@ -140,7 +140,7 @@ class ModelAnalyzer:
         a_bit: activation bit
         kv_bit: key and value bit. if it is None, it will be the same as a_bit
         use_flashattention: use flash attention/flash decoding
-        kv_token_ratio: use this for KV compression
+        n_parallel_decode: number of parallel decoding
 
         return is a dict with the following format:
         {
@@ -209,12 +209,12 @@ class ModelAnalyzer:
             self._analyze_to_results(
                 "decode",
                 name,
-                OPs=ic * oc * batchsize * 2,
+                OPs=ic * oc * batchsize * n_parallel_decode * 2,
                 load_weight=ic * oc * w_byte,
-                load_act=ic * batchsize * a_byte,
-                store_act=0 if is_kv_proj else oc * batchsize * a_byte,
+                load_act=ic * batchsize *n_parallel_decode * a_byte,
+                store_act=0 if is_kv_proj else oc * batchsize* n_parallel_decode * a_byte,
                 load_kv_cache=0,
-                store_kv_cache=(0 if is_normal_proj else oc * batchsize * kv_byte),
+                store_kv_cache=(0 if is_normal_proj else oc * batchsize * n_parallel_decode * kv_byte),
             )
             # for prefill
             self._analyze_to_results(
@@ -233,9 +233,9 @@ class ModelAnalyzer:
         # for attention
         head_size = hidden_size // num_attention_heads
         # for decode
-        qk_matmul_OPs = seqlen * head_size * num_attention_heads * batchsize * 2
-        sv_matmul_OPs = 1 * head_size * seqlen * num_attention_heads * batchsize * 2
-        softmax_OPs = batchsize * num_attention_heads * seqlen * 1 * 5
+        qk_matmul_OPs = n_parallel_decode * seqlen * head_size * num_attention_heads * batchsize * 2
+        sv_matmul_OPs = n_parallel_decode * head_size * seqlen * num_attention_heads * batchsize * 2
+        softmax_OPs = batchsize * num_attention_heads * seqlen * n_parallel_decode * 5
         if use_flashattention:
             name = f"fused_attention"
             bandwidth, max_OPS, onchip_buffer = self.get_hardware_info()
@@ -244,8 +244,8 @@ class ModelAnalyzer:
                 math.ceil(onchip_buffer / (kv_byte * head_size)), head_size
             )
             n_blocks_r = math.ceil(1 / block_size_r)
-            q_numel = (1) * head_size * batchsize * num_attention_heads * a_byte
-            o_numel = 1 * seqlen * batchsize * num_attention_heads * a_byte
+            q_numel = n_parallel_decode * head_size * batchsize * num_attention_heads * a_byte
+            o_numel = n_parallel_decode * seqlen * batchsize * num_attention_heads * a_byte
             self._analyze_to_results(
                 "decode",
                 name,
@@ -269,8 +269,8 @@ class ModelAnalyzer:
                 name,
                 OPs=qk_matmul_OPs,
                 load_weight=0,
-                load_act=(1) * head_size * batchsize * num_attention_heads * a_byte,
-                store_act=1 * seqlen * batchsize * num_attention_heads * a_byte,
+                load_act=n_parallel_decode * head_size * batchsize * num_attention_heads * a_byte,
+                store_act=n_parallel_decode * seqlen * batchsize * num_attention_heads * a_byte,
                 load_kv_cache=(seqlen)
                 * head_size
                 * batchsize
@@ -284,8 +284,8 @@ class ModelAnalyzer:
                 name,
                 OPs=sv_matmul_OPs,
                 load_weight=0,
-                load_act=(1 * seqlen * batchsize * num_attention_heads) * a_byte,
-                store_act=1 * head_size * batchsize * num_attention_heads * a_byte,
+                load_act=(n_parallel_decode * seqlen * batchsize * num_attention_heads) * a_byte,
+                store_act=n_parallel_decode * head_size * batchsize * num_attention_heads * a_byte,
                 load_kv_cache=(seqlen * head_size * batchsize * num_key_value_heads)
                 * kv_byte,
                 store_kv_cache=0,
@@ -298,8 +298,8 @@ class ModelAnalyzer:
                 name,
                 OPs=softmax_OPs,
                 load_weight=0,
-                load_act=batchsize * num_attention_heads * seqlen * 1 * a_byte,
-                store_act=batchsize * num_attention_heads * seqlen * 1 * a_byte,
+                load_act=batchsize * num_attention_heads * seqlen * n_parallel_decode * a_byte,
+                store_act=batchsize * num_attention_heads * seqlen * n_parallel_decode * a_byte,
                 load_kv_cache=0,
                 store_kv_cache=0,
             )
@@ -309,10 +309,10 @@ class ModelAnalyzer:
             self._analyze_to_results(
                 "decode",
                 name,
-                OPs=batchsize * hidden_size * 1 * 7,
+                OPs=batchsize * hidden_size * n_parallel_decode * 7,
                 load_weight=0,
-                load_act=batchsize * hidden_size * 1 * a_byte,
-                store_act=batchsize * hidden_size * 1 * a_byte,
+                load_act=batchsize * hidden_size * n_parallel_decode * a_byte,
+                store_act=batchsize * hidden_size * n_parallel_decode * a_byte,
                 load_kv_cache=0,
                 store_kv_cache=0,
             )
@@ -321,10 +321,10 @@ class ModelAnalyzer:
             self._analyze_to_results(
                 "decode",
                 name,
-                OPs=batchsize * hidden_size * 1,
+                OPs=batchsize * hidden_size * n_parallel_decode,
                 load_weight=0,
-                load_act=batchsize * hidden_size * 1 * a_byte,
-                store_act=batchsize * hidden_size * 1 * a_byte,
+                load_act=batchsize * hidden_size * n_parallel_decode * a_byte,
+                store_act=batchsize * hidden_size * n_parallel_decode * a_byte,
                 load_kv_cache=0,
                 store_kv_cache=0,
             )
@@ -332,10 +332,10 @@ class ModelAnalyzer:
             self._analyze_to_results(
                 "decode",
                 name,
-                OPs=batchsize * hidden_size * 1 * 2,
+                OPs=batchsize * hidden_size * n_parallel_decode * 2,
                 load_weight=0,
-                load_act=batchsize * hidden_size * 1 * a_byte * 2,
-                store_act=batchsize * hidden_size * 1 * a_byte,
+                load_act=batchsize * hidden_size * n_parallel_decode * a_byte * 2,
+                store_act=batchsize * hidden_size * n_parallel_decode * a_byte,
                 load_kv_cache=0,
                 store_kv_cache=0,
             )
@@ -494,8 +494,7 @@ class ModelAnalyzer:
             "prefill"
         ]["store_kv_cache"]
 
-        # lm_head
-        name = "lm_head"
+        
         args={
             'batchsize':batchsize,
             'a_byte':a_byte,
@@ -506,6 +505,8 @@ class ModelAnalyzer:
                 **layer_info)
             for data_name in ALL_DATA_NAMES:
                 total_results[layer_info['stage']][data_name] += self.results[layer_info['stage']][layer_info['name']][data_name]
+        # lm_head
+        # name = "lm_head"
         # for stage in ["prefill", "decode"]:
         #     self._analyze_to_results(
         #         stage,

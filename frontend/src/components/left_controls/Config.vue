@@ -32,6 +32,12 @@
         <!-- <span id="seq_length">1024</span> -->
         <input type="number" v-model.lazy="gen_length" min="1" max="4096">
     </div>
+    <div class="config_div" v-if="inference_stage=='decode'">
+        N Parallel Decode:
+        <input type="range" min="1" max="4096" value="1024" v-model.lazy="n_parallel_decode">
+        <!-- <span id="seq_length">1024</span> -->
+        <input type="number" v-model.lazy="n_parallel_decode" min="1" max="4096">
+    </div>
     <!-- <div class="config_div">
         Generation Length:
         <input type="range" min="1" max="4096" value="1024" oninput="gen_length.innerText = this.value">
@@ -128,6 +134,7 @@ const inference_stage = ref('decode');
 const batch_size = ref(1);
 const seq_length = ref(1024);
 const gen_length = ref(1);
+const n_parallel_decode = ref(1);
 const w_quant = ref('FP16');
 const a_quant = ref('FP16');
 const kv_quant = ref('FP16');
@@ -178,6 +185,12 @@ watch(use_flashattention, (n) => {
 watch(gen_length, (n) => {
     console.log("gen_length", n)
     global_inference_config.value.gen_length = n
+    global_update_trigger.value += 1
+})
+
+watch(n_parallel_decode, (n) => {
+    console.log("n_parallel_decode", n)
+    global_inference_config.value.n_parallel_decode = n
     global_update_trigger.value += 1
 })
 
