@@ -6,7 +6,8 @@ def test_parse():
         "hidden_size": 256,
         "num_attention_heads": 8,
         "num_key_value_heads": 4,
-        "intermediate_size": 512
+        "intermediate_size": 512,
+        "vocab_size": 1000,
     }
     nodes=manual_parse("configs/Llama.cfg",params)
     print(nodes)

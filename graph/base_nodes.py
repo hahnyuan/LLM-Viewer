@@ -6,7 +6,9 @@ class Linear(Node):
     attr:
     - out_features: int
     """
-    def analyze_node(self,input_shape):
+    def analyze_node(self,input_shapes):
+        input_shape=input_shapes[0]
+
         output_shape=input_shape[:-1]+[self.out_features]
         rst={
             "OPS": np.prod(input_shape)*self.out_features,
@@ -17,19 +19,43 @@ class Linear(Node):
         }
         return rst
 
+class Embedding(Node):
+    """
+    attr:
+    - out_features: int
+    - vocab_size: int
+    """
+    def analyze_node(self,input_shapes):
+        input_shape=input_shapes[0]
+        out_features=self.out_features
+
+        output_shape=input_shape+[out_features]
+        rst={
+            "OPS": 0,
+            "n_load_weight": np.prod(output_shape),
+            "n_load_act": np.prod(input_shape),
+            "n_store_act": np.prod(output_shape),
+            "output_shape": output_shape
+        }
+        return rst
 class Input(Node):
-    def analyze_node(self):
+    def analyze_node(self,input_shapes):
         rst={
             "OPS":0,
             "n_load_weight":0,
             "n_load_act":0,
             "n_store_act":0,
-            "output_shape":self.shape
+            "output_shape":[]
         }
         return rst
     
 class MatMul(Node):
-    def analyze_node(self,a_shape,b_shape):
+    def analyze_node(self,input_shapes):
+        a_shape,b_shape=input_shapes
+        if self.attrs.get("transpose_a",False):
+            a_shape=a_shape[:-2]+[a_shape[-1],a_shape[-2]]
+        if self.attrs.get("transpose_b",False):
+            b_shape=b_shape[:-2]+[b_shape[-1],b_shape[-2]]
         assert len(a_shape)>=2
         assert len(b_shape)>=2
         assert a_shape[-1]==b_shape[-2]
@@ -43,8 +69,10 @@ class MatMul(Node):
         }
         return rst
 
+
 class Add(Node):
-    def analyze_node(self,a_shape,b_shape):
+    def analyze_node(self,input_shapes):
+        a_shape,b_shape=input_shapes
         assert a_shape==b_shape
         output_shape=[max(a,b) for a,b in zip(a_shape,b_shape)]
         rst={
@@ -57,7 +85,8 @@ class Add(Node):
         return rst
     
 class Softmax(Node):
-    def analyze_node(self,input_shape):
+    def analyze_node(self,input_shapes):
+        input_shape=input_shapes[0]
         output_shape=input_shape
         rst={
             "OPS": np.prod(input_shape)*5,
@@ -69,7 +98,8 @@ class Softmax(Node):
         return rst
 
 class Norm(Node):
-    def analyze_node(self,input_shape):
+    def analyze_node(self,input_shapes):
+        input_shape=input_shapes[0]
         output_shape=input_shape
         rst={
             "OPS": np.prod(input_shape)*7,
@@ -81,13 +111,33 @@ class Norm(Node):
         return rst
     
 class Activation(Node):
-    def analyze_node(self,input_shape):
+    def analyze_node(self,input_shapes):
+        input_shape=input_shapes[0]
         output_shape=input_shape
         rst={
             "OPS": np.prod(input_shape)*2,
             "n_load_weight": 0,
             "n_load_act": np.prod(input_shape),
             "n_store_act": np.prod(input_shape),
+            "output_shape": output_shape
+        }
+        return rst
+    
+    
+class ReshapeTranspose(Node):
+    def analyze_node(self,input_shapes):
+        input_shape=input_shapes[0]
+        output_shape=[]
+        for i in self.attrs["shape"]:
+            if type(i)==str:
+                output_shape.append(eval(i))
+            else:
+                output_shape.append(i)
+        rst={
+            "OPS": 0,
+            "n_load_weight": 0,
+            "n_load_act": np.prod(input_shape),
+            "n_store_act": np.prod(output_shape),
             "output_shape": output_shape
         }
         return rst

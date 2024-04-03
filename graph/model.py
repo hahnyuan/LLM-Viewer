@@ -10,7 +10,7 @@ class Node:
             setattr(self,k,v)
 
 
-    def analyze_node(self,input_shape) -> typing.Dict:
+    def analyze_node(self,input_shapes) -> typing.Dict:
         rst={
             "OPS":0,
             "n_load_weight":0,
@@ -72,6 +72,7 @@ class Model:
             input_shapes=[shape_dict[input_name] for input_name in node.input_node_names]
 
             op_info=node.analyze_node(input_shapes)
-            shape_dict[node.name]=op_info["output_shape"]
+            if node.name not in shape_dict:
+                shape_dict[node.name]=op_info["output_shape"]
             rsts[node.name]=(node,op_info)
         return rsts

@@ -62,6 +62,8 @@ class LLMAnalyzer(BaseAnalyzer):
         assert batchsize > 0
         self.results = {"decode": {}, "prefill": {}}
         assert use_flashattention==False
+        if kv_bit is None:
+            kv_bit = a_bit
 
         # prefill
 
@@ -72,7 +74,7 @@ class LLMAnalyzer(BaseAnalyzer):
             QuantKV(kv_bit)
         ]
 
-        x_shape_dict={"input":[batchsize, seqlen]}
+        x_shape_dict={"input_inds":[batchsize, seqlen]}
         results=self.net_graph.analyze_forward(x_shape_dict)
 
         for modifier in prefill_modifiers:
@@ -91,7 +93,7 @@ class LLMAnalyzer(BaseAnalyzer):
             QuantKV(kv_bit)
         ]
 
-        x_shape_dict={"input":[n_parallel_decode, seqlen]}
+        x_shape_dict={"input_inds":[n_parallel_decode, seqlen]}
         results=self.net_graph.analyze_forward(x_shape_dict)
 
         for modifier in decode_modifiers:
