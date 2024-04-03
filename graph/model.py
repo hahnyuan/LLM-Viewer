@@ -2,7 +2,7 @@ import typing
 from typing import Dict
 
 class Node:
-    def __init__(self, name: str, input_node_names, attrs: typing.Dict):
+    def __init__(self, name: str, input_node_names=[], attrs={}):
         self.name = name
         self.input_node_names = input_node_names
         self.attrs = attrs
@@ -20,7 +20,7 @@ class Node:
         }
         return rst
 
-    def __str__(self) -> str:
+    def __repr__(self) -> str:
         return f"{self.name}[{self.__class__.__name__}] input={self.input_node_names} {self.attrs}"
 
 class Model:
