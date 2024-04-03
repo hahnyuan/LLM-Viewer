@@ -1,5 +1,12 @@
 from analyzers.base_analyzer import BaseAnalyzer
+from modifier.quantization import QuantAct, QuantWeight, QuantKV
+from modifier.kv_cache import MakeKVLoadStore,AddDecodeKVLoad
 
+ALL_DATA_NAMES = [
+    "OPs",
+    "memory_access",
+    "inference_time",
+]
 
 class LLMAnalyzer(BaseAnalyzer):
     def analyze(
@@ -57,27 +64,45 @@ class LLMAnalyzer(BaseAnalyzer):
         assert use_flashattention==False
 
         # prefill
+
+        prefill_modifiers=[
+            MakeKVLoadStore(),
+            QuantAct(a_bit),
+            QuantWeight(w_bit),
+            QuantKV(kv_bit)
+        ]
+
         x_shape_dict={"input":[batchsize, seqlen]}
-        results=self.model.analyze_forward(x_shape_dict)
+        results=self.net_graph.analyze_forward(x_shape_dict)
+
+        for modifier in prefill_modifiers:
+            modifier.run(results)
         self.results["prefill"]=results
 
+        
+
         # decode
+
+        decode_modifiers=[
+            MakeKVLoadStore(),
+            AddDecodeKVLoad(kv_seqlen=seqlen,n_parallel_decode=n_parallel_decode),
+            QuantAct(a_bit),
+            QuantWeight(w_bit),
+            QuantKV(kv_bit)
+        ]
+
         x_shape_dict={"input":[n_parallel_decode, seqlen]}
-        results=self.model.analyze_forward(x_shape_dict)
+        results=self.net_graph.analyze_forward(x_shape_dict)
+
+        for modifier in decode_modifiers:
+            modifier.run(results)
         self.results["decode"]=results
 
-
-        if kv_bit is None:
-            kv_bit = a_bit
-        self.w_bit = w_bit
-        self.a_bit = a_bit
-        self.kv_bit = kv_bit
-        self.batchsize = batchsize
-        self.seqlen = seqlen
-
-        w_byte = self.w_bit / 8
-        a_byte = self.a_bit / 8
-        kv_byte = self.kv_bit / 8
+        # compute total
+        num_hidden_layers=0
+        total_results = {"decode": {}, "prefill": {}}
+        self.results["total_results"] = total_results
+        return self.results
 
     def set_hooks(self, model):
-        self.model = model
+        self.net_graph = model

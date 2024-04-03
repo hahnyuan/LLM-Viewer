@@ -6,18 +6,18 @@ class Node:
         self.name = name
         self.input_node_names = input_node_names
         self.attrs = attrs
-        self.hooks=[]
+        for k,v in attrs.items():
+            setattr(self,k,v)
 
-    def get_op_info(self,input_shape) -> typing.Dict:
+
+    def analyze_node(self,input_shape) -> typing.Dict:
         rst={
             "OPS":0,
-            "load_weight":0,
-            "load_act":0,
-            "store_act":0,
+            "n_load_weight":0,
+            "n_load_act":0,
+            "n_store_act":0,
             "output_shape":[1]
         }
-        for hook in self.hooks:
-            rst=hook(self, rst)
         return rst
 
     def __str__(self) -> str:
@@ -71,7 +71,7 @@ class Model:
                 assert input_name in shape_dict, f"Input shape {input_name} not found"
             input_shapes=[shape_dict[input_name] for input_name in node.input_node_names]
 
-            op_info=node.get_op_info(input_shapes)
+            op_info=node.analyze_node(input_shapes)
             shape_dict[node.name]=op_info["output_shape"]
-            rsts[node.name]=op_info
+            rsts[node.name]=(node,op_info)
         return rsts
