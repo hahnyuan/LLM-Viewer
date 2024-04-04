@@ -1,4 +1,4 @@
-from graph.model import Model,Node
+from graph.module import Module,Node
 from analyzers.llm_analyzer import LLMAnalyzer
 from hardwares.roofline_model import RooflineModel
 from parser.manual_parser import manual_parse
@@ -12,7 +12,7 @@ def test_dummy_llm():
         "vocab_size": 1000,
     }
     nodes=manual_parse("configs/Llama.cfg",params)
-    model=Model(nodes)
+    model=Module(nodes)
 
     # Print the graph
     hardware_model=RooflineModel(1,1)

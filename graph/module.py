@@ -1,5 +1,6 @@
 import typing
-from typing import Dict
+from graph.base_nodes import Input
+
 
 class Node:
     def __init__(self, name: str, input_node_names=[], attrs={}):
@@ -23,8 +24,9 @@ class Node:
     def __repr__(self) -> str:
         return f"{self.name}[{self.__class__.__name__}] input={self.input_node_names} {self.attrs}"
 
-class Model:
-    def __init__(self, nodes=[]):
+class Module:
+    def __init__(self, nodes=[], name="module"):
+        self.name=name
         self.nodes = nodes
         self.topo_reorder()
 
@@ -64,15 +66,18 @@ class Model:
         Analyze the forward pass of the model.
         """
         shape_dict={}
-        shape_dict.update(x_shape_dict)
         rsts={}
         for node in self.nodes:
+            node_input_shapes=[]
             for input_name in node.input_node_names:
-                assert input_name in shape_dict, f"Input shape {input_name} not found"
-            input_shapes=[shape_dict[input_name] for input_name in node.input_node_names]
+                if input_name in x_shape_dict:
+                    node_input_shapes[input_name]=x_shape_dict[input_name]
+                elif input_name in shape_dict:
+                    node_input_shapes[input_name]=shape_dict[input_name]
+                else:
+                    raise ValueError(f"Input shape {input_name} not found")
 
-            op_info=node.analyze_node(input_shapes)
-            if node.name not in shape_dict:
-                shape_dict[node.name]=op_info["output_shape"]
+            op_info=node.analyze_node(node_input_shapes)
+            shape_dict[node.name]=op_info["output_shape"]
             rsts[node.name]=(node,op_info)
         return rsts

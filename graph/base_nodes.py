@@ -1,4 +1,4 @@
-from graph.model import Node
+from graph.module import Node
 import numpy as np
 
 class Linear(Node):
@@ -38,16 +38,16 @@ class Embedding(Node):
             "output_shape": output_shape
         }
         return rst
-class Input(Node):
-    def analyze_node(self,input_shapes):
-        rst={
-            "OPS":0,
-            "n_load_weight":0,
-            "n_load_act":0,
-            "n_store_act":0,
-            "output_shape":[]
-        }
-        return rst
+# class Input(Node):
+#     def analyze_node(self,input_shapes):
+#         rst={
+#             "OPS":0,
+#             "n_load_weight":0,
+#             "n_load_act":0,
+#             "n_store_act":0,
+#             "output_shape":input_shapes[0]
+#         }
+#         return rst
     
 class MatMul(Node):
     def analyze_node(self,input_shapes):
@@ -133,11 +133,14 @@ class ReshapeTranspose(Node):
                 output_shape.append(eval(i))
             else:
                 output_shape.append(i)
+
+        # no load and store, because we assume the reshape is fused to other operations
+        # you shold understand this is a theoretical assumption
         rst={
             "OPS": 0,
             "n_load_weight": 0,
-            "n_load_act": np.prod(input_shape),
-            "n_store_act": np.prod(output_shape),
+            "n_load_act": 0,
+            "n_store_act": 0,
             "output_shape": output_shape
         }
         return rst
