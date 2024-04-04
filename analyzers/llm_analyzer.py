@@ -18,6 +18,7 @@ class LLMAnalyzer(BaseAnalyzer):
         kv_bit=None,
         use_flashattention=False,
         n_parallel_decode=1,
+        compute_dtype="FP16"
     ):
         """
         return is a dict with the following format:
@@ -79,10 +80,9 @@ class LLMAnalyzer(BaseAnalyzer):
 
         for modifier in prefill_modifiers:
             modifier.run(results)
+
+        self.hardware_model.run(results,compute_dtype)
         self.results["prefill"]=results
-
-        
-
         # decode
 
         decode_modifiers=[
@@ -98,6 +98,8 @@ class LLMAnalyzer(BaseAnalyzer):
 
         for modifier in decode_modifiers:
             modifier.run(results)
+
+        self.hardware_model.run(results,compute_dtype)
         self.results["decode"]=results
 
         # compute total

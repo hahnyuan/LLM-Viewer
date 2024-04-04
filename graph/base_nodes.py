@@ -1,3 +1,4 @@
+from typing import Dict
 from graph.module import Node
 import numpy as np
 
@@ -11,7 +12,7 @@ class Linear(Node):
 
         output_shape=input_shape[:-1]+[self.out_features]
         rst={
-            "OPS": np.prod(input_shape)*self.out_features,
+            "OPs": np.prod(input_shape)*self.out_features,
             "n_load_weight": input_shape[-1]*self.out_features,
             "n_load_act": np.prod(input_shape),
             "n_store_act": np.prod(output_shape),
@@ -31,7 +32,8 @@ class Embedding(Node):
 
         output_shape=input_shape+[out_features]
         rst={
-            "OPS": 0,
+            "OPs": 0,
+            "n_weight": np.prod(self.vocab_size*self.out_features),
             "n_load_weight": np.prod(output_shape),
             "n_load_act": np.prod(input_shape),
             "n_store_act": np.prod(output_shape),
@@ -51,7 +53,7 @@ class MatMul(Node):
         assert a_shape[-1]==b_shape[-2]
         output_shape=a_shape[:-1]+b_shape[-1:]
         rst={
-            "OPS": b_shape[-1]*np.prod(output_shape),
+            "OPs": b_shape[-1]*np.prod(output_shape),
             "n_load_weight": 0,
             "n_load_act": np.prod(b_shape)+np.prod(a_shape),
             "n_store_act": np.prod(output_shape),
@@ -66,7 +68,7 @@ class Add(Node):
         assert a_shape==b_shape
         output_shape=[max(a,b) for a,b in zip(a_shape,b_shape)]
         rst={
-            "OPS": max(np.prod(a_shape),np.prod(b_shape)),
+            "OPs": max(np.prod(a_shape),np.prod(b_shape)),
             "n_load_weight": 0,
             "n_load_act": np.prod(a_shape)+np.prod(b_shape),
             "n_store_act": max(np.prod(a_shape),np.prod(b_shape)),
@@ -79,7 +81,7 @@ class Softmax(Node):
         input_shape=input_shapes[0]
         output_shape=input_shape
         rst={
-            "OPS": np.prod(input_shape)*5,
+            "OPs": np.prod(input_shape)*5,
             "n_load_weight": 0,
             "n_load_act": np.prod(input_shape),
             "n_store_act": np.prod(input_shape),
@@ -92,7 +94,7 @@ class Norm(Node):
         input_shape=input_shapes[0]
         output_shape=input_shape
         rst={
-            "OPS": np.prod(input_shape)*7,
+            "OPs": np.prod(input_shape)*7,
             "n_load_weight": 0,
             "n_load_act": np.prod(input_shape),
             "n_store_act": np.prod(input_shape),
@@ -105,7 +107,7 @@ class Activation(Node):
         input_shape=input_shapes[0]
         output_shape=input_shape
         rst={
-            "OPS": np.prod(input_shape)*2,
+            "OPs": np.prod(input_shape)*2,
             "n_load_weight": 0,
             "n_load_act": np.prod(input_shape),
             "n_store_act": np.prod(input_shape),
@@ -127,7 +129,7 @@ class ReshapeTranspose(Node):
         # no load and store, because we assume the reshape is fused to other operations
         # you shold understand this is a theoretical assumption
         rst={
-            "OPS": 0,
+            "OPs": 0,
             "n_load_weight": 0,
             "n_load_act": 0,
             "n_store_act": 0,

@@ -7,7 +7,7 @@ def get_network_graph(network_params):
 
     modules=[]
     embedding=Module(name="embedding", nodes=[
-    Embedding("embedding", ["input_inds"], {"out_features":p.hidden_size, "p.vocab_size":p.vocab_size})])
+    Embedding("embedding", ["input_inds"], {"out_features":p.hidden_size, "vocab_size":p.vocab_size})])
     modules.append(embedding)
 
     for i in range(p.num_hidden_layers):
@@ -44,3 +44,5 @@ def get_network_graph(network_params):
     modules.append(lm_head)
 
     return Network(modules=modules)
+
+

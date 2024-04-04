@@ -15,6 +15,8 @@ class MakeKVLoadStore(BaseModifier):
         q_numel=None
         s_numel=None
         for name, (node, node_info) in analyze_rsts.items():
+            if '.' in name:
+                name=name.split('.')[1]
             if name==self.q_proj:
                 q_numel=np.prod(node_info["output_shape"])
             if name==self.k_proj or name==self.v_proj:
@@ -28,6 +30,7 @@ class MakeKVLoadStore(BaseModifier):
             if name==self.sv_matmul:
                 node_info["n_load_kv_cache"] = node_info["n_load_act"]-s_numel
                 node_info["n_load_act"] = s_numel
+                
 
 class AddDecodeKVLoad(BaseModifier):
     def __init__(self, kv_seqlen,n_parallel_decode) -> None:

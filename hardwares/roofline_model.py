@@ -1,47 +1,47 @@
+from hardwares.hardware_params import hardware_params
 
 
 class RooflineModel():
-    def __init__(self, peak_flops, peak_memory_bandwidth):
-        self.peak_flops = peak_flops
-        self.peak_memory_bandwidth = peak_memory_bandwidth
+    def __init__(self, params):
+        self.params=params
+        self.bandwidth = params["bandwidth"]
+        self.onchip_buffer=params["onchip_buffer"]
 
-    def roofline(self, op_intensity, memory_intensity):
-        if op_intensity < 0 or memory_intensity < 0:
-            raise ValueError("Operation intensity and memory intensity must be positive")
-        if op_intensity > self.peak_flops:
-            raise ValueError("Operation intensity cannot exceed peak FLOPS")
-        if memory_intensity > self.peak_memory_bandwidth:
-            raise ValueError("Memory intensity cannot exceed peak memory bandwidth")
-        return min(op_intensity, memory_intensity)
+    def run(self,analyze_rsts,dtype):
+        for name, (node, node_info) in analyze_rsts.items():
+            memory_access=0
+            memory_access+=node_info["load_act"]
+            memory_access+=node_info["load_weight"]
+            if "load_kv_cache" in node_info:
+                memory_access+=node_info["load_kv_cache"]
+            memory_access+=node_info["store_act"]
+            if "store_kv_cache" in node_info:
+                memory_access+=node_info["store_kv_cache"]
+            OPs=node_info["OPs"]
+            if memory_access==0:
+                continue
+            max_OPS=self.params[dtype]
+            y_max = max_OPS
+            memory_access_bytes = memory_access
+            turning_point = y_max / self.bandwidth
+            arithmetic_intensity = OPs / memory_access_bytes
+            if arithmetic_intensity < turning_point:
+                bound = "memory"
+                performance = arithmetic_intensity * self.bandwidth
+            else:
+                bound = "compute"
+                performance = y_max
+            if performance==0:
+                inference_time=memory_access/self.bandwidth
+            else:
+                inference_time = OPs / performance
+            node_info["arithmetic_intensity"]=arithmetic_intensity
+            node_info["bound"]=bound
+            node_info["performance"]=performance
+            node_info["inference_time"]=inference_time
+            
+            
 
-    def roofline_points(self, op_intensities, memory_intensities):
-        return [(op_intensity, self.roofline(op_intensity, memory_intensity)) for op_intensity, memory_intensity in zip(op_intensities, memory_intensities)]
-
-    def roofline_plot(self, op_intensities, memory_intensities, ax=None):
-        if ax is None:
-            fig, ax = plt.subplots()
-        ax.plot(op_intensities, memory_intensities, label="Roofline", color="black")
-        ax.plot(op_intensities, self.roofline_points(op_intensities, memory_intensities), label="Roofline", color="black", linestyle="--")
-        ax.set_xlabel("Operation intensity (FLOPS/byte)")
-        ax.set_ylabel("Memory intensity (bytes/FLOP)")
-        return ax
-
-    def roofline_analyze(bandwidth, max_OPS, OPs, memory_access):
-        # bandwidth is bytes/s
-        # memory_access in byte
-        # x axis is OPS/byte
-        # y axis is OPS/s
-        y_max = max_OPS
-        memory_access_bytes = memory_access
-        turning_point = y_max / bandwidth
-        arithmetic_intensity = OPs / memory_access_bytes
-        if arithmetic_intensity < turning_point:
-            bound = "memory"
-            performance = arithmetic_intensity * bandwidth
-        else:
-            bound = "compute"
-            performance = y_max
-        if performance==0:
-            1==1
-            pass
-        return arithmetic_intensity, performance, bound
+def get_roofline_model(hardware_name):
+    model=RooflineModel(hardware_params[hardware_name])
+    return model
