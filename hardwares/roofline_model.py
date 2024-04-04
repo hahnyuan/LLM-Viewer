@@ -39,6 +39,7 @@ class RooflineModel():
             node_info["bound"]=bound
             node_info["performance"]=performance
             node_info["inference_time"]=inference_time
+            node_info["memory_access"]=memory_access
             
             
 

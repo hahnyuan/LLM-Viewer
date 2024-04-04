@@ -13,6 +13,7 @@ class LLMAnalyzer(BaseAnalyzer):
         self,
         seqlen,
         batchsize,
+        stage="decode",
         w_bit=16,
         a_bit=16,
         kv_bit=None,
@@ -23,90 +24,73 @@ class LLMAnalyzer(BaseAnalyzer):
         """
         return is a dict with the following format:
         {
-            "decode": {
-                    "layer_name": {
-                            "OPs": "",
-                            "memory_access": "",
-                            "arithmetic_intensity": "",
-                            "performance": "",
-                            "bound": "",
-                            "load_weight": "",
-                            "load_act": "",
-                            "store_act": "",
-                            "load_kv_cache": "",
-                            "store_kv_cache": "",
-                            "inference_time": ""
-                    }
-            },
-            "prefill": {
-                    "layer_name": {
-                            "OPs": "",
-                            "memory_access": "",
-                            "arithmetic_intensity": "",
-                            "performance": "",
-                            "bound": "",
-                            "load_weight": "",
-                            "load_act": "",
-                            "store_act": "",
-                            "load_kv_cache": "",
-                            "store_kv_cache": "",
-                            "inference_time": ""
-                    }
-            },
-            "total_results": {
-                "decode": {},
-                "prefill": {}
+            "layers": {
+                "layer_name1": {
+                        "OPs": "",
+                        "memory_access": "",
+                        "arithmetic_intensity": "",
+                        "performance": "",
+                        "bound": "",
+                        "load_weight": "",
+                        "load_act": "",
+                        "store_act": "",
+                        "load_kv_cache": "",
+                        "store_kv_cache": "",
+                        "inference_time": "",
+                        ...
+                }
+                "layer_name2": ...,
+                ...
+            }
+            "network": {
+                "OPs": ...,
+                "memory_access": ...,
+                "inference_time": ...,
             }
         }
         """
         assert seqlen > 0
         assert batchsize > 0
-        self.results = {"decode": {}, "prefill": {}}
         assert use_flashattention==False
         if kv_bit is None:
             kv_bit = a_bit
 
-        # prefill
+        if stage=="prefill":
+            modifiers=[
+                MakeKVLoadStore(),
+                QuantAct(a_bit),
+                QuantWeight(w_bit),
+                QuantKV(kv_bit)
+            ]
+            x_shape_dict={"input_inds":[batchsize, seqlen]}
+        elif stage=="decode":
+            modifiers=[
+                MakeKVLoadStore(),
+                AddDecodeKVLoad(kv_seqlen=seqlen,n_parallel_decode=n_parallel_decode),
+                QuantAct(a_bit),
+                QuantWeight(w_bit),
+                QuantKV(kv_bit)
+            ]
+            x_shape_dict={"input_inds":[n_parallel_decode, seqlen]}
+        else:
+            raise ValueError(f"stage {stage} is not supported")
 
-        prefill_modifiers=[
-            MakeKVLoadStore(),
-            QuantAct(a_bit),
-            QuantWeight(w_bit),
-            QuantKV(kv_bit)
-        ]
+        layer_results=self.net_graph.analyze_forward(x_shape_dict)
 
-        x_shape_dict={"input_inds":[batchsize, seqlen]}
-        results=self.net_graph.analyze_forward(x_shape_dict)
+        for modifier in modifiers:
+            modifier.run(layer_results)
 
-        for modifier in prefill_modifiers:
-            modifier.run(results)
-
-        self.hardware_model.run(results,compute_dtype)
-        self.results["prefill"]=results
-        # decode
-
-        decode_modifiers=[
-            MakeKVLoadStore(),
-            AddDecodeKVLoad(kv_seqlen=seqlen,n_parallel_decode=n_parallel_decode),
-            QuantAct(a_bit),
-            QuantWeight(w_bit),
-            QuantKV(kv_bit)
-        ]
-
-        x_shape_dict={"input_inds":[n_parallel_decode, seqlen]}
-        results=self.net_graph.analyze_forward(x_shape_dict)
-
-        for modifier in decode_modifiers:
-            modifier.run(results)
-
-        self.hardware_model.run(results,compute_dtype)
-        self.results["decode"]=results
+        self.hardware_model.run(layer_results,compute_dtype)
 
         # compute total
-        num_hidden_layers=0
-        total_results = {"decode": {}, "prefill": {}}
-        self.results["total_results"] = total_results
-        return self.results
+        network_results = {_:0 for _ in ALL_DATA_NAMES}
+        for layer_name, (layer,layer_info) in layer_results.items():
+            for data_name in ALL_DATA_NAMES:
+                if data_name in layer_info:
+                    network_results[data_name] += layer_info[data_name]
+
+        results={"layers":layer_results,"network":network_results}
+        return results
 
     def set_hooks(self, model):
         self.net_graph = model
