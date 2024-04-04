@@ -22,3 +22,6 @@ def test_dummy_llm():
     analyzer=LLMAnalyzer(network,hardware_model)
     rst=analyzer.analyze(256,1)
     print(rst)
+
+    rst=analyzer.analyze(1024,5)
+    print(rst)
