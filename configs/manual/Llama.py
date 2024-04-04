@@ -43,4 +43,4 @@ def get_network_graph(network_params):
     ])
     modules.append(lm_head)
 
-    return Network(name="llama", modules=modules)
+    return Network(modules=modules)

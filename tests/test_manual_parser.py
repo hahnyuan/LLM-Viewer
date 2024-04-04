@@ -1,5 +1,6 @@
 from graph.base_nodes import *
-from parser.manual_parser import manual_parse
+from parser.manual_parser import manual_parse_network
+from types import SimpleNamespace
 
 def test_parse():
     params = {
@@ -9,5 +10,7 @@ def test_parse():
         "intermediate_size": 512,
         "vocab_size": 1000,
     }
-    nodes=manual_parse("configs/Llama.cfg",params)
-    print(nodes)
+    params_obj = SimpleNamespace(**params)
+
+    network=manual_parse_network("configs/manual/example.py",params_obj)
+    print(network)

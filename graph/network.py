@@ -10,9 +10,6 @@ class Network:
         """
         Reorder the modules in topological order.
         """
-        for module in self.modules:
-            for node in module.nodes:
-                if '.' in node.input
 
         visited = {}  
         topo_order = []  
@@ -20,9 +17,9 @@ class Network:
         def dfs(module, visited, topo_order):
             visited[module.name] = True
 
-            for input_module_name in module.input_module_names:
-                input_module = next((m for m in self.modules if m.name == input_module_name), None)
-                if input_module and input_module_name not in visited:
+            for module_input_name in module.input_names:
+                input_module = next((m for m in self.modules if m.name == module_input_name), None)
+                if input_module and module_input_name not in visited:
                     dfs(input_module, visited, topo_order)
 
             topo_order.append(module)
@@ -45,19 +42,22 @@ class Network:
         """
         shape_dict={}
         rsts={}
-        for node in self.nodes:
-            node_input_shapes=[]
-            for input_name in node.input_node_names:
+        for module in self.modules:
+            module_input_dict={}
+            for input_name in module.input_names:
                 if input_name in x_shape_dict:
-                    node_input_shapes[input_name]=x_shape_dict[input_name]
+                    module_input_dict[input_name]=x_shape_dict[input_name]
                 elif input_name in shape_dict:
-                    node_input_shapes[input_name]=shape_dict[input_name]
+                    module_input_dict[input_name]=shape_dict[input_name]
                 else:
                     raise ValueError(f"Input shape {input_name} not found")
 
-            op_info=node.analyze_node(node_input_shapes)
-            shape_dict[node.name]=op_info["output_shape"]
-            rsts[node.name]=(node,op_info)
+            rst=module.analyze_forward(module_input_dict)
+            module_name=module.name
+            for op_name,op_info in rst.items():
+                new_name=f"{module_name}.{op_name}"
+                shape_dict[new_name]=op_info[1]["output_shape"]
+                rsts[new_name]=op_info
         return rsts
 
     
