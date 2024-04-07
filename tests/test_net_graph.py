@@ -1,6 +1,6 @@
-from graph.module import Module,Node
+from net_graph.module import Module,Node
 
-def test_model():
+def test_module():
     # Create some nodes
     node1 = Node("node1", [], {"op": "Const", "value": 1})
     node2 = Node("node2", [], {"op": "Const", "value": 2})

@@ -1,8 +1,8 @@
-from graph.module import Module,Node
+from net_graph.module import Module,Node
 from analyzers.llm_analyzer import LLMAnalyzer
 from hardwares.roofline_model import get_roofline_model
-from parser.manual_parser import manual_parse_network
 from types import SimpleNamespace
+from configs.manual.Llama import get_llama_network_graph
 
 def test_dummy_llm():
     params = {
@@ -15,9 +15,7 @@ def test_dummy_llm():
     }
     params_obj = SimpleNamespace(**params)
 
-    network=manual_parse_network("configs/manual/Llama.py",params_obj)
-
-    # Print the graph
+    network=get_llama_network_graph(None,params_obj)
     hardware_model=get_roofline_model("nvidia_A6000")
     analyzer=LLMAnalyzer(network,hardware_model)
     rst=analyzer.analyze(256,1)

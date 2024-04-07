@@ -1,4 +1,4 @@
-from graph.module import Module
+from net_graph.module import Module
 import typing
 
 class Network:

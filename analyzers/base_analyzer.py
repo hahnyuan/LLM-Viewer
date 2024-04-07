@@ -8,8 +8,7 @@ class BaseAnalyzer():
         self.hardware_model = hardware_model
 
         
-    def set_hooks(self, model):
-        pass
+    analyze_params_info={}
 
     def analyze(self,**kwargs):
         raise NotImplementedError

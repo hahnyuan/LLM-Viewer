@@ -1,7 +1,7 @@
 from flask import Flask, request
 from flask import render_template
 from flask_cors import CORS
-from get_model_graph import get_model_graph
+from get_ui_graph import analyze_get_ui_graph
 from backend_settings import avaliable_hardwares,avaliable_model_ids
 import argparse
 
@@ -17,10 +17,9 @@ def index():
 @app.route("/get_graph", methods=["POST"])
 def get_graph():
     inference_config = request.json["inference_config"]
-    nodes, edges, total_results, hardware_info = get_model_graph(
+    nodes, edges, total_results, hardware_info = analyze_get_ui_graph(
         request.json["model_id"],
         request.json["hardware"],
-        None,
         inference_config,
     )
     return {

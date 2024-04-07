@@ -1,6 +1,6 @@
-from graph.module import Module
-from graph.base_nodes import *
-from graph.network import Network
+from net_graph.module import Module
+from net_graph.base_nodes import *
+from net_graph.network import Network
 
 def get_network_graph(network_params):
     p=network_params

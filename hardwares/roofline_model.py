@@ -6,6 +6,7 @@ class RooflineModel():
         self.params=params
         self.bandwidth = params["bandwidth"]
         self.onchip_buffer=params["onchip_buffer"]
+    
 
     def run(self,analyze_rsts,dtype):
         for name, (node, node_info) in analyze_rsts.items():

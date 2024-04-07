@@ -1,14 +1,78 @@
 from analyzers.base_analyzer import BaseAnalyzer
 from modifier.quantization import QuantAct, QuantWeight, QuantKV
 from modifier.kv_cache import MakeKVLoadStore,AddDecodeKVLoad
+from modifier.memory_access import CalcMemoryAccess
 
-ALL_DATA_NAMES = [
+NETWORK_WISE_NAMES = [
     "OPs",
     "memory_access",
     "inference_time",
 ]
 
 class LLMAnalyzer(BaseAnalyzer):
+    analyze_params_info={
+            "seqlen": {
+                "type": "int",
+                "min": 1,
+                "max": 4096,
+                "default": 1024,
+                "description": "Sequence length in prefill stage, and prefilled sequence length in decode stage"
+            },
+            "batchsize": {
+                "type": "int",
+                "min": 1,
+                "max": 4096,
+                "default": 1,
+                "description": "Batch size"
+            },
+            "stage": {
+                "type": "str",
+                "choices": ["prefill", "decode", "chat"],
+                "default": "decode",
+                "description": "Stage of the model, either prefill or decode"
+            },
+            "w_bit": {
+                "type": "int",
+                "min": 1,
+                "max": 16,
+                "default": 16,
+                "description": "Bitwidth for weights"
+            },
+            "a_bit": {
+                "type": "int",
+                "min": 1,
+                "max": 16,
+                "default": 16,
+                "description": "Bitwidth for activations"
+            },
+            "kv_bit": {
+                "type": "int",
+                "min": 1,
+                "max": 16,
+                "default": None,
+                "description": "Bitwidth for key and value cache"
+            },
+            "use_flashattention": {
+                "type": "bool",
+                "default": False,
+                "description": "Whether to use flashattention"
+            },
+            "n_parallel_decode": {
+                "type": "int",
+                "min": 1,
+                "max": 64,
+                "default": 1,
+                "description": "Number of parallel decodes"
+            },
+            "compute_dtype": {
+                "type": "str",
+                "choices": ["FP16", "INT8"],
+                "default": "FP16",
+                "description": "Compute data type"
+            }
+        }
+        
+
     def analyze(
         self,
         seqlen,
@@ -60,7 +124,8 @@ class LLMAnalyzer(BaseAnalyzer):
                 MakeKVLoadStore(),
                 QuantAct(a_bit),
                 QuantWeight(w_bit),
-                QuantKV(kv_bit)
+                QuantKV(kv_bit),
+                CalcMemoryAccess()
             ]
             x_shape_dict={"input_inds":[batchsize, seqlen]}
         elif stage=="decode":
@@ -69,10 +134,12 @@ class LLMAnalyzer(BaseAnalyzer):
                 AddDecodeKVLoad(kv_seqlen=seqlen,n_parallel_decode=n_parallel_decode),
                 QuantAct(a_bit),
                 QuantWeight(w_bit),
-                QuantKV(kv_bit)
+                QuantKV(kv_bit),
+                CalcMemoryAccess()
             ]
             x_shape_dict={"input_inds":[n_parallel_decode, seqlen]}
         else:
+            #TODO write the chat stage
             raise ValueError(f"stage {stage} is not supported")
 
         layer_results=self.net_graph.analyze_forward(x_shape_dict)
@@ -83,9 +150,9 @@ class LLMAnalyzer(BaseAnalyzer):
         self.hardware_model.run(layer_results,compute_dtype)
 
         # compute total
-        network_results = {_:0 for _ in ALL_DATA_NAMES}
+        network_results = {_:0 for _ in NETWORK_WISE_NAMES}
         for layer_name, (layer,layer_info) in layer_results.items():
-            for data_name in ALL_DATA_NAMES:
+            for data_name in NETWORK_WISE_NAMES:
                 if data_name in layer_info:
                     network_results[data_name] += layer_info[data_name]
 

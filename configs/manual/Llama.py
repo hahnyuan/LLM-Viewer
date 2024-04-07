@@ -1,9 +1,13 @@
-from graph.module import Module
-from graph.base_nodes import *
-from graph.network import Network
+from net_graph.module import Module
+from net_graph.base_nodes import *
+from net_graph.network import Network
+from transformers import AutoConfig
 
-def get_network_graph(network_params):
-    p=network_params
+def get_llama_network_graph(model_id, manual_params=None):
+    if manual_params is not None:
+        p=manual_params
+    else:
+        p=AutoConfig.from_pretrained(model_id)
 
     modules=[]
     embedding=Module(name="embedding", nodes=[

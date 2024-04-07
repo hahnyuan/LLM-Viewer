@@ -1,5 +1,5 @@
 from typing import Dict
-from graph.module import Node
+from net_graph.module import Node
 import numpy as np
 
 class Linear(Node):
