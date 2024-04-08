@@ -1,4 +1,19 @@
 
+
+
+def str_number_1024(num):
+    if num > (1<<40):
+        return f"{num/(1<<40):.1f}T"
+    elif num > (1<<30):
+        return f"{num/(1<<30):.1f}G"
+    elif num > (1<<20):
+        return f"{num/(1<<20):.1f}M"
+    elif num > (1<<10):
+        return f"{num/(1<<10):.1f}K"
+    else:
+        return f"{num:.1f}"
+    
+
 def str_number(num):
     if num > 1e14:
         return f"{num/1e12:.0f}T"

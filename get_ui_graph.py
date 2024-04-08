@@ -3,14 +3,27 @@ import importlib
 import os
 from hardwares.hardware_params import hardware_params
 from model_analyzer import ModelAnalyzer
-from utils import str_number
-import numpy as np
+from utils import str_number,str_number_1024
 import re
 from backend_settings import avaliable_model_ids_sources
 from hardwares.roofline_model import get_roofline_model
+import numpy as np
 
 config_cache = {}
 
+def numpy_value_to_python(d):
+    for key in d:
+        if isinstance(d[key],np.ndarray):
+            d[key]=d[key].tolist()
+        if isinstance(d[key],np.int64):
+            d[key]=int(d[key])
+        if isinstance(d[key],np.int32):
+            d[key]=int(d[key])
+        if isinstance(d[key],np.float32):
+            d[key]=float(d[key])
+        if isinstance(d[key],np.float64):
+            d[key]=float(d[key])
+    return d
 
 def get_analyer(model_id, hardware, config_path) -> ModelAnalyzer:
     config = f"{model_id}_{hardware}_{config_path}"
@@ -70,19 +83,14 @@ def analyze_get_ui_graph(model_id, hardware, inference_config):
     )
     hardware_info = hardware_model.params
 
-    nodes = [
-        {
-            "label": "input",
-            "id": "input",
-        }
-    ]
+    nodes = []
     edges = []
 
     def write_to_node(name, OPs, memory_access, info, input_names=[]):
         node = {
             "label": name,
             "id": name,
-            "description": f"OPs:{str_number(OPs)}, Access:{str_number(memory_access)}",
+            "description": f"OPs:{str_number(OPs)}, Access:{str_number_1024(memory_access)}B",
             "info": info,
         }
         nodes.append(node)
@@ -96,12 +104,24 @@ def analyze_get_ui_graph(model_id, hardware, inference_config):
     prefix="transformer_layer0"
 
     for input_name in module.input_names:
-        write_to_node(input_name, 0, 0, {}, [])
+        if '.' in input_name:
+            source,show_input_name=input_name.split('.')
+        else:
+            show_input_name=input_name
+            source="input"
+        input_node = {
+            "label": show_input_name,
+            "description": f"from: {source}",
+            "id": input_name,
+        }
+        nodes.append(input_node)
 
     for node in module.nodes:
         name=f"{prefix}.{node.name}"
         info=result["layers"][name][1]
+        numpy_value_to_python(info)
+            
         write_to_node(node.name, info["OPs"], info["memory_access"], info, node.input_names)
 
-    network_results = result["network"]
+    network_results = numpy_value_to_python(result["network"])
     return nodes, edges, network_results, hardware_info

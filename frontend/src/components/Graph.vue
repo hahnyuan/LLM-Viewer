@@ -47,7 +47,7 @@ const hardware = inject('hardware')
 const global_update_trigger = inject('global_update_trigger')
 const global_inference_config = inject('global_inference_config')
 const ip_port = inject('ip_port')
-const total_results = inject('total_results')
+const network_results = inject('network_results')
 var hardware_info = {}
 var nowFocusNode = null
 var nowFocusNodePrevColor = null
@@ -92,7 +92,7 @@ function graphUpdate() {
         for (let i = 0; i < graph_data.nodes.length; i++) {
             all_node_info.value[graph_data.nodes[i].id] = graph_data.nodes[i].info;
         }
-        total_results.value = response.data.total_results
+        network_results.value = response.data.network_results
         hardware_info = response.data.hardware_info
 
         const old_ids = new Set(graph.getNodes().map(node => node.get('id')));

@@ -17,7 +17,7 @@ def index():
 @app.route("/get_graph", methods=["POST"])
 def get_graph():
     inference_config = request.json["inference_config"]
-    nodes, edges, total_results, hardware_info = analyze_get_ui_graph(
+    nodes, edges, network_results, hardware_info = analyze_get_ui_graph(
         request.json["model_id"],
         request.json["hardware"],
         inference_config,
@@ -25,11 +25,11 @@ def get_graph():
     return {
         "nodes": nodes,
         "edges": edges,
-        "total_results": total_results,
+        "network_results": network_results,
         "hardware_info": hardware_info,
     }
 
-@app.route("/get_net_params",method=["POST"])
+@app.route("/get_net_params",methods=["POST"])
 def get_net_params():
     model_id=request.json["model_id"]
     return {

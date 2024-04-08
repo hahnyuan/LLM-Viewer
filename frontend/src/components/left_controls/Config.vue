@@ -92,7 +92,7 @@
     <h2>Network-wise Analysis</h2>
     <div>
         <h3>{{ inference_stage }}</h3>
-        <div v-for="(value, key) in total_results[inference_stage]" :key="key" class="network-wise-info-item">
+        <div v-for="(value, key) in network_results[inference_stage]" :key="key" class="network-wise-info-item">
             <span v-if="['bound'].includes(key)">{{ key }}: {{ value }}</span>
             <span v-else-if="['inference_time'].includes(key)">{{ key }}: {{ strNumberTime(value) }}</span>
             <span v-else>{{ key }}: {{ strNumber(value) }}</span>
@@ -104,7 +104,7 @@
     </div>
     <!-- <div v-if="inference_stage=='prefill'">
         <h3>Prefill</h3>
-        <div v-for="(value, key) in total_results['prefill']" :key="key" class="network-wise-info-item">
+        <div v-for="(value, key) in network_results['prefill']" :key="key" class="network-wise-info-item">
             <span v-if="['bound'].includes(key)">{{ key }}: {{ value }}</span>
             <span v-else-if="['inference_time'].includes(key)">{{ key }}: {{ strNumberTime(value) }}</span>
             <span v-else>{{ key }}: {{ strNumber(value) }}</span>
@@ -112,7 +112,7 @@
     </div>
     <div v-if="inference_stage=='chat'">
         <h3>Prefill</h3>
-        <div v-for="(value, key) in total_results['chat']" :key="key" class="network-wise-info-item">
+        <div v-for="(value, key) in network_results['chat']" :key="key" class="network-wise-info-item">
             <span v-if="['bound'].includes(key)">{{ key }}: {{ value }}</span>
             <span v-else-if="['inference_time'].includes(key)">{{ key }}: {{ strNumberTime(value) }}</span>
             <span v-else>{{ key }}: {{ strNumber(value) }}</span>
@@ -128,7 +128,7 @@ const global_update_trigger = inject('global_update_trigger');
 
 
 const global_inference_config = inject('global_inference_config');
-const total_results = inject('total_results');
+const network_results = inject('network_results');
 
 const inference_stage = ref('decode');
 const batch_size = ref(1);

@@ -13,13 +13,13 @@ import { ref, computed, provide } from 'vue';
 const model_id = ref("meta-llama/Llama-2-7b-hf");
 const hardware = ref("nvidia_A6000");
 const global_update_trigger = ref(1);
-const total_results = ref({});
+const network_results = ref({});
 const ip_port = ref("api.llm-viewer.com:5000");
 
 provide("model_id", model_id);
 provide("hardware", hardware);
 provide("global_update_trigger", global_update_trigger);
-provide("total_results", total_results);
+provide("network_results", network_results);
 provide("ip_port", ip_port);
 
 

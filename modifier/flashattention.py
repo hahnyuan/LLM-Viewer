@@ -51,14 +51,3 @@ class FlashAttention(BaseModifier):
                 node_info["n_load_kv_cache"] = node_info["n_load_act"]-s_numel
                 node_info["n_load_act"] = s_numel
                 
-
-class AddDecodeKVLoad(BaseModifier):
-    def __init__(self, kv_seqlen,n_parallel_decode) -> None:
-        super().__init__()
-        self.kv_seqlen = kv_seqlen
-        self.n_parallel_decode = n_parallel_decode
-    
-    def run(self,analyze_rsts):
-        for name, (node, node_info) in analyze_rsts.items():
-            if "n_load_kv_cache" in node_info:
-                node_info["n_load_kv_cache"] += node_info["n_load_kv_cache"]//self.n_parallel_decode * self.kv_seqlen

@@ -20,12 +20,12 @@ def test_dummy_llm():
     }
     model_id = "georgesung/llama2_7b_chat_uncensored"
     hardware = "nvidia_A6000"
-    nodes, edges, total_results, hardware_info = analyze_get_ui_graph(
+    nodes, edges, network_results, hardware_info = analyze_get_ui_graph(
         model_id,
         hardware,
         inference_config,
     )
     print(nodes)
     print(edges)
-    print(total_results)
+    print(network_results)
     print(hardware_info)
