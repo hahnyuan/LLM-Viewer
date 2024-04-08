@@ -2,7 +2,7 @@ from flask import Flask, request
 from flask import render_template
 from flask_cors import CORS
 from get_ui_graph import analyze_get_ui_graph
-from backend_settings import avaliable_hardwares,avaliable_model_ids
+from backend_settings import avaliable_hardwares,avaliable_model_ids,avaliable_model_ids_sources
 import argparse
 
 app = Flask(__name__)
@@ -28,6 +28,14 @@ def get_graph():
         "total_results": total_results,
         "hardware_info": hardware_info,
     }
+
+@app.route("/get_net_params",method=["POST"])
+def get_net_params():
+    model_id=request.json["model_id"]
+    return {
+        "net_params":avaliable_model_ids_sources[model_id][1].analyze_params_info
+    }
+
 
 @app.route("/get_avaliable", methods=["GET"])
 def get_avaliable():
