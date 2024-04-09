@@ -2,7 +2,6 @@ from transformers import AutoTokenizer, AutoConfig, AutoModelForCausalLM
 import importlib
 import os
 from hardwares.hardware_params import hardware_params
-from model_analyzer import ModelAnalyzer
 from utils import str_number,str_number_1024
 import re
 from backend_settings import avaliable_model_ids_sources
@@ -25,16 +24,16 @@ def numpy_value_to_python(d):
             d[key]=float(d[key])
     return d
 
-def get_analyer(model_id, hardware, config_path) -> ModelAnalyzer:
-    config = f"{model_id}_{hardware}_{config_path}"
-    if config not in config_cache:
-        config_cache[config] = ModelAnalyzer(
-            model_id,
-            hardware,
-            config_path,
-            source=avaliable_model_ids_sources[model_id]["source"],
-        )
-    return config_cache[config]
+# def get_analyer(model_id, hardware, config_path) -> ModelAnalyzer:
+#     config = f"{model_id}_{hardware}_{config_path}"
+#     if config not in config_cache:
+#         config_cache[config] = ModelAnalyzer(
+#             model_id,
+#             hardware,
+#             config_path,
+#             source=avaliable_model_ids_sources[model_id]["source"],
+#         )
+#     return config_cache[config]
 
 
 def get_quant_bit(dtype):
@@ -53,7 +52,7 @@ def get_quant_bit(dtype):
         raise ValueError(f"Unsupported dtype:{dtype}")
 
 
-def analyze_get_ui_graph(model_id, hardware, inference_config):
+def analyze_get_ui_graph(model_id, hardware, frontend_params_info):
 
     network_func, analyzer_cls = avaliable_model_ids_sources[model_id]
     network = network_func(model_id)
@@ -61,67 +60,63 @@ def analyze_get_ui_graph(model_id, hardware, inference_config):
     analyzer=analyzer_cls(network,hardware_model)
 
     # Roofline model
-    stage = inference_config["stage"]
-    w_bit = get_quant_bit(inference_config["w_quant"])
-    a_bit = get_quant_bit(inference_config["a_quant"])
-    kv_bit = get_quant_bit(inference_config["kv_quant"])
-    seq_length = int(inference_config["seq_length"])
-    batch_size = int(inference_config["batch_size"])
-    n_parallel_decode = int(inference_config["n_parallel_decode"])
-    use_flashattention = bool(inference_config["use_flashattention"])
-    gen_length = int(inference_config["gen_length"])
+    kwargs={}
+    for param in frontend_params_info:
+        value=param["value"]
+        if param["type"]=="int":
+            value=int(value)
+        kwargs[param["name"]]=value
+
 
     result = analyzer.analyze(
-        seqlen=seq_length,
-        batchsize=batch_size,
-        stage=stage,
-        w_bit=w_bit,
-        a_bit=a_bit,
-        kv_bit=kv_bit,
-        use_flashattention=use_flashattention,
-        n_parallel_decode=n_parallel_decode,
+        **kwargs
     )
     hardware_info = hardware_model.params
+    if "compute_dtype" in kwargs:
+        hardware_info["max_OPS"]=hardware_info[kwargs["compute_dtype"]]
+    else:
+        hardware_info["max_OPS"]=hardware_info["FP16"]
 
-    nodes = []
-    edges = []
 
-    def write_to_node(name, OPs, memory_access, info, input_names=[]):
-        node = {
-            "label": name,
-            "id": name,
-            "description": f"OPs:{str_number(OPs)}, Access:{str_number_1024(memory_access)}B",
-            "info": info,
-        }
-        nodes.append(node)
-        for input_name in input_names:
-            edge = {"source": input_name, "target": name}
-            edges.append(edge)
+    module_graphs={}
 
-    
-    # TODO: select module in GUI
-    module=network.modules[1]
-    prefix="transformer_layer0"
+    for module in network.modules:
+        module_name=module.name
+        nodes = []
+        edges = []
 
-    for input_name in module.input_names:
-        if '.' in input_name:
-            source,show_input_name=input_name.split('.')
-        else:
-            show_input_name=input_name
-            source="input"
-        input_node = {
-            "label": show_input_name,
-            "description": f"from: {source}",
-            "id": input_name,
-        }
-        nodes.append(input_node)
 
-    for node in module.nodes:
-        name=f"{prefix}.{node.name}"
-        info=result["layers"][name][1]
-        numpy_value_to_python(info)
+        for input_name in module.input_names:
+            if '.' in input_name:
+                source,show_input_name=input_name.split('.')
+            else:
+                show_input_name=input_name
+                source="input"
+            input_node = {
+                "label": show_input_name,
+                "description": f"from: {source}",
+                "id": input_name,
+            }
+            nodes.append(input_node)
+
+        for node in module.nodes:
+            name=f"{module_name}.{node.name}"
+            if name not in result["layers"]:
+                continue
+            info=result["layers"][name][1]
+            numpy_value_to_python(info)
             
-        write_to_node(node.name, info["OPs"], info["memory_access"], info, node.input_names)
+            nodes.append({
+                "label": node.name,
+                "id": node.name,
+                "description": f"OPs:{str_number(info['OPs'])}, Access:{str_number_1024(info['memory_access'])}B",
+                "info": info,
+            })
+            for input_name in node.input_names:
+                edge = {"source": input_name, "target": node.name}
+                edges.append(edge)
+
+        module_graphs[module_name] = {"nodes": nodes, "edges": edges}
 
     network_results = numpy_value_to_python(result["network"])
-    return nodes, edges, network_results, hardware_info
+    return module_graphs, network_results, hardware_info

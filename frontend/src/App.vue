@@ -14,6 +14,7 @@ const model_id = ref("meta-llama/Llama-2-7b-hf");
 const hardware = ref("nvidia_A6000");
 const global_update_trigger = ref(1);
 const network_results = ref({});
+const frontend_params_info = ref({});
 const ip_port = ref("api.llm-viewer.com:5000");
 
 provide("model_id", model_id);
@@ -21,20 +22,7 @@ provide("hardware", hardware);
 provide("global_update_trigger", global_update_trigger);
 provide("network_results", network_results);
 provide("ip_port", ip_port);
-
-
-const global_inference_config = ref({ 
-  "stage": "decode", 
-  batch_size: 1, 
-  seq_length: 1024, 
-  gen_length: 1,
-  n_parallel_decode: 1,
-  w_quant: "FP16", 
-  a_quant: "FP16", 
-  kv_quant: "FP16", 
-  use_flashattention: false
-});
-provide("global_inference_config", global_inference_config);
+provide("frontend_params_info", frontend_params_info);
 
 </script>
 

@@ -11,7 +11,6 @@
   "dependencies": {
     "@antv/g6": "^4.8.24",
     "@vitejs/plugin-vue": "^5.0.4",
-    "@vue/cli-service": "^5.0.8",
     "axios": "^1.6.7",
     "chart.js": "^4.4.2",
     "chartjs-plugin-annotation": "^3.0.1",

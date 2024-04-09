@@ -1,5 +1,4 @@
 from flask import Flask, request
-from flask import render_template
 from flask_cors import CORS
 from get_ui_graph import analyze_get_ui_graph
 from backend_settings import avaliable_hardwares,avaliable_model_ids,avaliable_model_ids_sources
@@ -16,24 +15,22 @@ def index():
 
 @app.route("/get_graph", methods=["POST"])
 def get_graph():
-    inference_config = request.json["inference_config"]
-    nodes, edges, network_results, hardware_info = analyze_get_ui_graph(
+    module_graphs, network_results, hardware_info = analyze_get_ui_graph(
         request.json["model_id"],
         request.json["hardware"],
-        inference_config,
+        request.json["frontend_params_info"],
     )
     return {
-        "nodes": nodes,
-        "edges": edges,
+        "module_graphs": module_graphs,
         "network_results": network_results,
         "hardware_info": hardware_info,
     }
 
-@app.route("/get_net_params",methods=["POST"])
-def get_net_params():
+@app.route("/get_frontend_params_info",methods=["POST"])
+def get_frontend_params_info():
     model_id=request.json["model_id"]
     return {
-        "net_params":avaliable_model_ids_sources[model_id][1].frontend_params_info
+        "frontend_params_info":avaliable_model_ids_sources[model_id][1].frontend_params_info
     }
 
 

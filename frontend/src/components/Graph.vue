@@ -1,6 +1,6 @@
 <template>
     <div class="main_graph" ref="graphContainer">
-        <div id="info-window" class="float-info-window" v-if="info_window_str.length>0">
+        <div id="info-window" class="float-info-window" v-if="info_window_str.length > 0">
             <h3> {{ info_window_str }}</h3>
         </div>
         <div id="graphContainer" @resize="handleResize"></div>
@@ -18,9 +18,10 @@
                 <strong>{{ selected_node_id }}</strong>
             </div>
             <div v-for="(value, key) in all_node_info[selected_node_id]" :key="key" class="float-node-info-item">
-                <span v-if="['bound'].includes(key)">{{ key }}: {{ value }}</span>
+                <span>{{ key }}: {{ (value) }}</span>
+                <!-- <span v-if="['bound'].includes(key)">{{ key }}: {{ value }}</span>
                 <span v-else-if="['inference_time'].includes(key)">{{ key }}: {{ strNumberTime(value) }}</span>
-                <span v-else>{{ key }}: {{ strNumber(value) }}</span>
+                <span v-else>{{ key }}: {{ strNumber(value) }}</span> -->
             </div>
             <div class="float-node-info-item">
                 <canvas id="lineChart" width="300" height="200"></canvas>
@@ -45,13 +46,15 @@ import annotationPlugin from 'chartjs-plugin-annotation';
 const model_id = inject('model_id')
 const hardware = inject('hardware')
 const global_update_trigger = inject('global_update_trigger')
-const global_inference_config = inject('global_inference_config')
+const frontend_params_info = inject('frontend_params_info')
 const ip_port = inject('ip_port')
 const network_results = inject('network_results')
+
 var hardware_info = {}
 var nowFocusNode = null
 var nowFocusNodePrevColor = null
-
+var module_graphs = null
+var selected_module=null
 
 var graph = null;
 var graph_data;
@@ -80,15 +83,25 @@ window.onresize = () => {
     }
 };
 
+
+
 function graphUpdate() {
     const url = 'http://' + ip_port.value + '/get_graph'
     console.log("graphUpdate", url)
-    info_window_str.value="Loading from server..."
-    var is_init=false
-    axios.post(url, { model_id: model_id.value, hardware: hardware.value, inference_config: global_inference_config.value }).then(function (response) {
+    info_window_str.value = "Loading from server..."
+    var is_init = false
+    axios.post(url, { model_id: model_id.value, hardware: hardware.value, frontend_params_info: frontend_params_info.value }).then(function (response) {
         console.log(response);
-        info_window_str.value=""
-        graph_data = response.data
+        info_window_str.value = ""
+        module_graphs=response.data.module_graphs //module_graphs is object
+        let selected_module = null;
+        for (let key in module_graphs) {
+            if (key.includes("transformer")) {
+                selected_module = key;
+                break;
+            }
+        }
+        graph_data = module_graphs[selected_module]
         for (let i = 0; i < graph_data.nodes.length; i++) {
             all_node_info.value[graph_data.nodes[i].id] = graph_data.nodes[i].info;
         }
@@ -97,7 +110,7 @@ function graphUpdate() {
 
         const old_ids = new Set(graph.getNodes().map(node => node.get('id')));
         const new_ids = new Set(graph_data.nodes.map(node => node.id));
-        const is_equal=old_ids.size === new_ids.size && [...old_ids].every(key => new_ids.has(key));
+        const is_equal = old_ids.size === new_ids.size && [...old_ids].every(key => new_ids.has(key));
 
         if (is_equal) {
             // iterate each node
@@ -108,7 +121,7 @@ function graphUpdate() {
                 });
             });
         } else {
-            nowFocusNode=null
+            nowFocusNode = null
             graph.clear()
             graph.data(graph_data)
             graph.render()
@@ -117,14 +130,14 @@ function graphUpdate() {
         setTimeout(() => {
             update_roofline_model();
         }, 10);
-        
+
         setTimeout(() => {
             graph.fitView();
         }, 10);
 
     })
         .catch(function (error) {
-            info_window_str.value="Error in get_graph"
+            info_window_str.value = "Error in get_graph"
             console.log("error in graphUpdate");
             console.log(error);
         });
@@ -202,30 +215,36 @@ function update_roofline_model() {
 
         var annotation
         var x_max
-        if (selected_node_id.value){
+        if (selected_node_id.value) {
+            // if arithmetic_intensity not in all_node_info.value[selected_node_id.value] return
+            if (!all_node_info.value[selected_node_id.value] || !all_node_info.value[selected_node_id.value]["arithmetic_intensity"]) {
+                return;
+            }
+            console.log("update_roofline_model", all_node_info.value[selected_node_id.value])
+
             const node_arithmetic_intensity = all_node_info.value[selected_node_id.value]["arithmetic_intensity"];
-            x_max = Math.max(turningPoint * 3, node_arithmetic_intensity+1);
-            annotation={
-                        annotations: {
-                            lineX: {
-                                type: 'line',
-                                xMin: node_arithmetic_intensity,
-                                xMax: node_arithmetic_intensity,
-                                yMin: 0,
-                                yMax: max_OPS * 1.1,
-                                borderColor: 'blue',
-                                borderWidth: 2,
-                                borderDash: [5, 5], // 虚线样式
-                                label: {
-                                    enabled: true,
-                                    content: 'Node AI',
-                                    position: 'top'
-                                }
-                            }
+            x_max = Math.max(turningPoint * 3, node_arithmetic_intensity + 1);
+            annotation = {
+                annotations: {
+                    lineX: {
+                        type: 'line',
+                        xMin: node_arithmetic_intensity,
+                        xMax: node_arithmetic_intensity,
+                        yMin: 0,
+                        yMax: max_OPS * 1.1,
+                        borderColor: 'blue',
+                        borderWidth: 2,
+                        borderDash: [5, 5], // 虚线样式
+                        label: {
+                            enabled: true,
+                            content: 'Node AI',
+                            position: 'top'
                         }
                     }
-        }else{
-            annotation={}
+                }
+            }
+        } else {
+            annotation = {}
             x_max = turningPoint * 3
         }
         roofline_chart = new Chart(ctx, {
@@ -296,13 +315,13 @@ function update_roofline_model() {
     }
 }
 
-function release_select(){
+function release_select() {
     selected_node_id.value = ""
     update_roofline_model()
 }
 
 onMounted(() => {
-    graph = new G6.Graph(graph_config); 
+    graph = new G6.Graph(graph_config);
     graph.on('node:click', (event) => {
         const { item } = event;
         const node = item.getModel();
@@ -318,8 +337,8 @@ onMounted(() => {
     });
     graphUpdate(true);
     graph.render();
-    
-    
+
+
 })
 
 function clickNode(node) {

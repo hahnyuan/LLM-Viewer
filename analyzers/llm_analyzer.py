@@ -11,73 +11,82 @@ NETWORK_WISE_NAMES = [
 ]
 
 class LLMAnalyzer(BaseAnalyzer):
-    frontend_params_info={
-        "stage": {
+    frontend_params_info=[
+        {
+            "name": "stage",
             "type": "select",
-            "choices": ["prefill", "decode", "chat"],
+            "choices": ["decode", "prefill",  "chat"],
             "default": "decode",
             "description": "Stage of the model, either prefill or decode"
         },
-        "seqlen": {
+        {
+            "name": "seqlen",
             "type": "int",
             "min": 1,
             "max": 4096,
             "default": 1024,
             "description": "Sequence length in prefill stage, and prefilled sequence length in decode stage"
         },
-        "batchsize": {
+        {
+            "name": "batchsize",
             "type": "int",
             "min": 1,
             "max": 4096,
             "default": 1,
             "description": "Batch size"
         },
-        "n_parallel_decode": {
+        {
+            "name": "n_parallel_decode",
             "type": "int",
             "min": 1,
             "max": 64,
             "default": 1,
             "description": "Number of parallel decodes"
         },
-        "w_bit": {
+        {
+            "name": "w_bit",
             "type": "int",
             "min": 1,
             "max": 16,
             "default": 16,
             "description": "Bitwidth for weights"
         },
-        "a_bit": {
+        {
+            "name": "a_bit",
             "type": "int",
             "min": 1,
             "max": 16,
             "default": 16,
             "description": "Bitwidth for activations"
         },
-        "kv_bit": {
+        {
+            "name": "kv_bit",
             "type": "int",
             "min": 1,
             "max": 16,
-            "default": None,
+            "default": 16,
             "description": "Bitwidth for key and value cache"
         },
-        "use_flashattention": {
+        {
+            "name": "use_flashattention",
             "type": "bool",
             "default": False,
             "description": "Whether to use flashattention"
         },
-        "compute_dtype": {
+        {
+            "name": "compute_dtype",
             "type": "select",
             "choices": ["FP16", "INT8"],
             "default": "FP16",
             "description": "Compute data type"
         }
-    }
+    ]
         
 
     def analyze(
         self,
-        seqlen,
-        batchsize,
+        seqlen=1024,
+        batchsize=1,
         stage="decode",
         w_bit=16,
         a_bit=16,

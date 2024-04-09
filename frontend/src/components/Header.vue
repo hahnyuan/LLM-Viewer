@@ -54,12 +54,13 @@
 </template>
 
 <script setup>
-import { inject, ref, watch, computed, onMounted } from 'vue';
-import axios from 'axios'
+import { inject, ref, watch, onMounted } from 'vue';
+import { update_avaliable_model_hardwares, update_frontend_params_info } from '@/server.js'
 const model_id = inject('model_id');
 const hardware = inject('hardware');
 const global_update_trigger = inject('global_update_trigger');
 const ip_port = inject('ip_port');
+const frontend_params_info = inject('frontend_params_info');
 
 const avaliable_hardwares = ref([]);
 const avaliable_model_ids = ref([]);
@@ -68,32 +69,23 @@ const version = ref(llm_viewer_frontend_version)
 
 const is_show_help = ref(false)
 
-function update_avaliable() {
-    const url = 'http://' + ip_port.value + '/get_avaliable'
-    axios.get(url).then(function (response) {
-        console.log(response);
-        avaliable_hardwares.value = response.data.avaliable_hardwares
-        avaliable_model_ids.value = response.data.avaliable_model_ids
-    })
-        .catch(function (error) {
-            console.log("error in get_avaliable");
-            console.log(error);
-        });
-}
+
 
 onMounted(() => {
     console.log("Header mounted")
-    update_avaliable()
+    update_avaliable_model_hardwares(avaliable_hardwares, avaliable_model_ids, ip_port)
 })
 
 var select_model_id = ref('meta-llama/Llama-2-7b-hf');
 watch(select_model_id, (n) => {
     console.log("select_model_id", n)
     model_id.value = n
+    frontend_params_info.value= {}
+    update_frontend_params_info(frontend_params_info, model_id, ip_port)
     global_update_trigger.value += 1
 })
 
-var select_hardware = ref('nvidia_V100');
+var select_hardware = ref('nvidia_A6000');
 watch(select_hardware, (n) => {
     console.log("select_hardware", n)
     hardware.value = n
@@ -102,7 +94,7 @@ watch(select_hardware, (n) => {
 
 watch(ip_port, (n) => {
     console.log("ip_port", n)
-    update_avaliable()
+    update_avaliable_model_hardwares(avaliable_hardwares, avaliable_model_ids, ip_port)
 })
 
 
@@ -165,4 +157,4 @@ watch(ip_port, (n) => {
     /* border: 2px solid #4e4e4e; */
     z-index: 999;
 }
-</style>
+</style>@/server.js
