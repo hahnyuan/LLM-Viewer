@@ -13,6 +13,7 @@ class Linear(Node):
         output_shape=input_shape[:-1]+[self.out_features]
         rst={
             "OPs": np.prod(input_shape)*self.out_features,
+            "n_weight": input_shape[-1]*self.out_features,
             "n_load_weight": input_shape[-1]*self.out_features,
             "n_load_act": np.prod(input_shape),
             "n_store_act": np.prod(output_shape),

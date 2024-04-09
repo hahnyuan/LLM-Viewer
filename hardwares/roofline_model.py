@@ -10,14 +10,7 @@ class RooflineModel():
 
     def run(self,analyze_rsts,dtype):
         for name, (node, node_info) in analyze_rsts.items():
-            memory_access=0
-            memory_access+=node_info["load_act"]
-            memory_access+=node_info["load_weight"]
-            if "load_kv_cache" in node_info:
-                memory_access+=node_info["load_kv_cache"]
-            memory_access+=node_info["store_act"]
-            if "store_kv_cache" in node_info:
-                memory_access+=node_info["store_kv_cache"]
+            memory_access=node_info["memory_access"]
             OPs=node_info["OPs"]
             if memory_access==0:
                 continue
@@ -40,7 +33,6 @@ class RooflineModel():
             node_info["bound"]=bound
             node_info["performance"]=performance
             node_info["inference_time"]=inference_time
-            node_info["memory_access"]=memory_access
             
             
 

@@ -11,12 +11,12 @@ def get_llama_network_graph(model_id, manual_params=None):
 
     modules=[]
     embedding=Module(name="embedding", nodes=[
-    Embedding("embedding", ["input_inds"], {"out_features":p.hidden_size, "vocab_size":p.vocab_size})])
+    Embedding("embeded_feature", ["input_inds"], {"out_features":p.hidden_size, "vocab_size":p.vocab_size})])
     modules.append(embedding)
 
     for i in range(p.num_hidden_layers):
         if i==0:
-            input_name="embedding.embedding"
+            input_name="embedding.embeded_feature"
         else:
             input_name=f"transformer_layer{i-1}.mlp_add"
         transformer_layer=Module(name=f"transformer_layer{i}",nodes=[
