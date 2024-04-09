@@ -49,4 +49,4 @@ def get_linear_layers(model_params):
         "down_proj":[intermediate_size, hidden_size]
     }
 
-from configs.Llama import flashattention_transformer_layer_graph,transformer_layer_graph
+from net_parsers.Llama import flashattention_transformer_layer_graph,transformer_layer_graph

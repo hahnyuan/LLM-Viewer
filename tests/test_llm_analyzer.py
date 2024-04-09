@@ -2,7 +2,7 @@ from net_graph.module import Module,Node
 from analyzers.llm_analyzer import LLMAnalyzer
 from hardwares.roofline_model import get_roofline_model
 from types import SimpleNamespace
-from configs.manual.Llama import get_llama_network_graph
+from net_parsers.manual.Llama import get_llama_network_graph
 
 def test_dummy_llm():
     params = {

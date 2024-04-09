@@ -1,4 +1,4 @@
-from configs.manual.Llama import get_llama_network_graph
+from net_parsers.manual.Llama import get_llama_network_graph
 from analyzers.llm_analyzer import LLMAnalyzer
 from hardwares.hardware_params import hardware_params
 

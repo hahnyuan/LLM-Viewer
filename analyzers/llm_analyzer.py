@@ -10,7 +10,7 @@ NETWORK_WISE_NAMES = [
 ]
 
 class LLMAnalyzer(BaseAnalyzer):
-    analyze_params_info={
+    frontend_params_info={
         "stage": {
             "type": "select",
             "choices": ["prefill", "decode", "chat"],

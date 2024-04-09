@@ -33,7 +33,7 @@ def get_graph():
 def get_net_params():
     model_id=request.json["model_id"]
     return {
-        "net_params":avaliable_model_ids_sources[model_id][1].analyze_params_info
+        "net_params":avaliable_model_ids_sources[model_id][1].frontend_params_info
     }
 
 

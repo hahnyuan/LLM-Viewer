@@ -8,7 +8,7 @@ class BaseAnalyzer():
         self.hardware_model = hardware_model
 
         
-    analyze_params_info={}
+    frontend_params_info={}
 
     def analyze(self,**kwargs):
         raise NotImplementedError
