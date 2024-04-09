@@ -23,3 +23,18 @@ def test_dummy_llm():
 
     rst=analyzer.analyze(1024,5)
     print(rst)
+
+    rst=analyzer.analyze(1024,5,stage="prefill")
+    print(rst)
+
+    rst=analyzer.analyze(1024,5,w_bit=4,a_bit=2,kv_bit=6)
+    print(rst)
+
+    rst=analyzer.analyze(1024,5,use_flashattention=True)
+    print(rst)
+
+    rst=analyzer.analyze(1024,5,n_parallel_decode=16)
+    print(rst)
+
+    rst=analyzer.analyze(1024,5,compute_dtype="INT8")
+    print(rst)

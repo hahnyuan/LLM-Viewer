@@ -2,6 +2,7 @@ from analyzers.base_analyzer import BaseAnalyzer
 from modifier.quantization import QuantAct, QuantWeight, QuantKV
 from modifier.kv_cache import MakeKVLoadStore,AddDecodeKVLoad
 from modifier.memory_access import CalcMemoryAccess
+from modifier.flashattention import FlashAttention
 
 NETWORK_WISE_NAMES = [
     "OPs",
@@ -115,32 +116,29 @@ class LLMAnalyzer(BaseAnalyzer):
         """
         assert seqlen > 0
         assert batchsize > 0
-        assert use_flashattention==False
         if kv_bit is None:
             kv_bit = a_bit
 
         if stage=="prefill":
             modifiers=[
                 MakeKVLoadStore(),
-                QuantAct(a_bit),
-                QuantWeight(w_bit),
-                QuantKV(kv_bit),
-                CalcMemoryAccess()
             ]
             x_shape_dict={"input_inds":[batchsize, seqlen]}
         elif stage=="decode":
             modifiers=[
                 MakeKVLoadStore(),
                 AddDecodeKVLoad(kv_seqlen=seqlen,n_parallel_decode=n_parallel_decode),
-                QuantAct(a_bit),
-                QuantWeight(w_bit),
-                QuantKV(kv_bit),
-                CalcMemoryAccess()
             ]
             x_shape_dict={"input_inds":[n_parallel_decode, seqlen]}
         else:
             #TODO write the chat stage
             raise ValueError(f"stage {stage} is not supported")
+        if use_flashattention:
+            modifiers.append(FlashAttention(self.hardware_model.onchip_buffer))
+        modifiers.extend([QuantAct(a_bit),
+                QuantWeight(w_bit),
+                QuantKV(kv_bit),
+                CalcMemoryAccess()])
 
         layer_results=self.net_graph.analyze_forward(x_shape_dict)
 
