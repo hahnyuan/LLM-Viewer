@@ -23,14 +23,15 @@ class MakeKVLoadStore(BaseModifier):
                 node_info["n_store_kv_cache"] = node_info["n_store_act"]
                 node_info["n_store_act"] = 0
             if name==self.qk_matmul:
+                node.analyze_node(node.input_shapes)
                 node_info["n_load_kv_cache"] = node_info["n_load_act"]-q_numel
                 node_info["n_load_act"] = q_numel
+                node_info["n_store_kv_cache"] = node_info["n_store_act"]
             if name==self.softmax:
                 s_numel=np.prod(node_info["output_shape"])
             if name==self.sv_matmul:
                 node_info["n_load_kv_cache"] = node_info["n_load_act"]-s_numel
                 node_info["n_load_act"] = s_numel
-                
 
 class AddDecodeKVLoad(BaseModifier):
     def __init__(self, kv_seqlen,n_parallel_decode) -> None:
@@ -42,3 +43,4 @@ class AddDecodeKVLoad(BaseModifier):
         for name, (node, node_info) in analyze_rsts.items():
             if "n_load_kv_cache" in node_info:
                 node_info["n_load_kv_cache"] += node_info["n_load_kv_cache"]//self.n_parallel_decode * self.kv_seqlen
+                node_info["OPs"]*=self.kv_seqlen

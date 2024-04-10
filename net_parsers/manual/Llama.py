@@ -20,9 +20,10 @@ def get_llama_network_graph(model_id, manual_params=None):
         else:
             input_name=f"transformer_layer{i-1}.mlp_add"
         transformer_layer=Module(name=f"transformer_layer{i}",nodes=[
-            Linear("q_proj", [input_name], {"out_features":p.hidden_size}),
-            Linear("k_proj", [input_name], {"out_features":p.hidden_size//p.num_attention_heads*p.num_key_value_heads}),
-            Linear("v_proj", [input_name], {"out_features":p.hidden_size//p.num_attention_heads*p.num_key_value_heads}),
+            Norm("attn_norm", [input_name]),
+            Linear("q_proj", ["attn_norm"], {"out_features":p.hidden_size}),
+            Linear("k_proj", ["attn_norm"], {"out_features":p.hidden_size//p.num_attention_heads*p.num_key_value_heads}),
+            Linear("v_proj", ["attn_norm"], {"out_features":p.hidden_size//p.num_attention_heads*p.num_key_value_heads}),
             ReshapeTranspose("q_reshape", ["q_proj"], {"shape":["input_shape[0]",p.num_attention_heads,"input_shape[1]", p.hidden_size//p.num_attention_heads]}),
             ReshapeTranspose("k_reshape", ["k_proj"], {"shape":["input_shape[0]",p.num_key_value_heads,p.hidden_size//p.num_attention_heads,"input_shape[1]"]}),
             ReshapeTranspose("v_reshape", ["v_proj"], {"shape":["input_shape[0]",p.num_key_value_heads,"input_shape[1]", p.hidden_size//p.num_attention_heads]}),

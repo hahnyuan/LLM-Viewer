@@ -2,6 +2,8 @@ from typing import Dict
 from net_graph.module import Node
 import numpy as np
 
+# NOTICE: a MAC(multiply-accumulate) should be counted as 2 OPs
+
 class Linear(Node):
     """
     attr:
@@ -12,7 +14,7 @@ class Linear(Node):
 
         output_shape=input_shape[:-1]+[self.out_features]
         rst={
-            "OPs": np.prod(input_shape)*self.out_features,
+            "OPs": np.prod(input_shape)*self.out_features*2,
             "n_weight": input_shape[-1]*self.out_features,
             "n_load_weight": input_shape[-1]*self.out_features,
             "n_load_act": np.prod(input_shape),
@@ -54,7 +56,7 @@ class MatMul(Node):
         assert a_shape[-1]==b_shape[-2]
         output_shape=a_shape[:-1]+b_shape[-1:]
         rst={
-            "OPs": b_shape[-1]*np.prod(output_shape),
+            "OPs": b_shape[-1]*np.prod(output_shape)*2,
             "n_load_weight": 0,
             "n_load_act": np.prod(b_shape)+np.prod(a_shape),
             "n_store_act": np.prod(output_shape),

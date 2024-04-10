@@ -21,6 +21,33 @@ export function strNumber(num) {
       return `${num.toFixed(2)}`;
     }
   }
+
+  // def str_number_1024(num):
+  //   if num > (1<<40):
+  //       return f"{num/(1<<40):.1f}T"
+  //   elif num > (1<<30):
+  //       return f"{num/(1<<30):.1f}G"
+  //   elif num > (1<<20):
+  //       return f"{num/(1<<20):.1f}M"
+  //   elif num > (1<<10):
+  //       return f"{num/(1<<10):.1f}K"
+  //   else:
+  //       return f"{num:.1f}"
+
+  export function strNumber_1024(num) {
+    if (num > (2**40)) {
+      return `${(num /2**40 ).toFixed(1)}T`;
+    } else if (num > (2**30)) {
+      return `${(num /2**30 ).toFixed(1)}G`;
+    } else if (num > (2**20)) {
+      return `${(num /2**20 ).toFixed(1)}M`;
+    } else if (num > (2**10)) {
+      return `${(num /2**10 ).toFixed(1)}K`;
+    } else {
+      return `${num.toFixed(1)}`;
+    }
+  }
+
   
   export function strNumberTime(num) {
     if (num >= 1) {

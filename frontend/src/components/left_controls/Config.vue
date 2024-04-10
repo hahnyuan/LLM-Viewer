@@ -20,70 +20,32 @@
         </span>    
         
     </div>
-
-
-    <!-- <div class="config_div">
-        Use Flash Attention
-        <input type="checkbox">
-    </div>
-    <div class="config_div">
-        Decoding Method
-        <select>
-            <option value="Greedy">Greedy</option>
-        </select>
-    </div> -->
-    <!-- <h2>Network-wise Analysis</h2>
+    <h2>Network-wise Analysis</h2>
     <div>
-        <h3>{{ inference_stage }}</h3>
-        <div v-for="(value, key) in network_results[inference_stage]" :key="key" class="network-wise-info-item">
+        <div v-for="(value, key) in network_results" :key="key" class="network-wise-info-item">
             <span v-if="['bound'].includes(key)">{{ key }}: {{ value }}</span>
             <span v-else-if="['inference_time'].includes(key)">{{ key }}: {{ strNumberTime(value) }}</span>
+            <span v-else-if="['memory_access'].includes(key)">{{ key }}: {{ strNumber_1024(value) }}B</span>
             <span v-else>{{ key }}: {{ strNumber(value) }}</span>
         </div>
         <p>NOTE: The time estimated by the roofline model represents the theoretical performance that the hardware can achieve. 
         The purpose of creating this tool is to help readers gain a clearer understanding of the key factors that influence LLM inference. 
         Only the relative relationships can be referenced. </p>
-        
-    </div> -->
-    <!-- <div v-if="inference_stage=='prefill'">
-        <h3>Prefill</h3>
-        <div v-for="(value, key) in network_results['prefill']" :key="key" class="network-wise-info-item">
-            <span v-if="['bound'].includes(key)">{{ key }}: {{ value }}</span>
-            <span v-else-if="['inference_time'].includes(key)">{{ key }}: {{ strNumberTime(value) }}</span>
-            <span v-else>{{ key }}: {{ strNumber(value) }}</span>
-        </div>
     </div>
-    <div v-if="inference_stage=='chat'">
-        <h3>Prefill</h3>
-        <div v-for="(value, key) in network_results['chat']" :key="key" class="network-wise-info-item">
-            <span v-if="['bound'].includes(key)">{{ key }}: {{ value }}</span>
-            <span v-else-if="['inference_time'].includes(key)">{{ key }}: {{ strNumberTime(value) }}</span>
-            <span v-else>{{ key }}: {{ strNumber(value) }}</span>
-        </div>
-    </div> -->
 </template>
 
 <script setup>
 import { inject, ref, watch, computed } from 'vue';
-import { strNumber,strNumberTime } from '@/utils.js';
+import { strNumber,strNumberTime,strNumber_1024 } from '@/utils.js';
 
 const global_update_trigger = inject('global_update_trigger');
 const frontend_params_info = inject('frontend_params_info');
+const network_results = inject('network_results');
 
 watch(frontend_params_info, () => {
         console.log("frontend_params_info change")
         global_update_trigger.value += 1
     }, { deep: true });
-
-// for (let key in frontend_params_info.value) {
-//     if (frontend_params_info.value[key].type === 'bool') {
-//         frontend_params_info.value[key].value = frontend_params_info.value[key].value === 'true' ? true : false
-//     }
-//     watch(frontend_params_info.value[key].value, () => {
-//         console.log("frontend_params_info change",frontend_params_info.value[key])
-//         global_update_trigger.value += 1
-//     }, { deep: true });
-// }
 
 </script>
 

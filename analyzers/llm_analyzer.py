@@ -138,7 +138,7 @@ class LLMAnalyzer(BaseAnalyzer):
                 MakeKVLoadStore(),
                 AddDecodeKVLoad(kv_seqlen=seqlen,n_parallel_decode=n_parallel_decode),
             ]
-            x_shape_dict={"input_inds":[n_parallel_decode, seqlen]}
+            x_shape_dict={"input_inds":[1, n_parallel_decode]}
         else:
             #TODO write the chat stage
             raise ValueError(f"stage {stage} is not supported")

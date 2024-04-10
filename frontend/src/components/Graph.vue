@@ -18,10 +18,11 @@
                 <strong>{{ selected_node_id }}</strong>
             </div>
             <div v-for="(value, key) in all_node_info[selected_node_id]" :key="key" class="float-node-info-item">
-                <span>{{ key }}: {{ (value) }}</span>
-                <!-- <span v-if="['bound'].includes(key)">{{ key }}: {{ value }}</span>
-                <span v-else-if="['inference_time'].includes(key)">{{ key }}: {{ strNumberTime(value) }}</span>
-                <span v-else>{{ key }}: {{ strNumber(value) }}</span> -->
+                <span>{{ key }}: </span>
+                <span v-if="['bound','output_shape'].includes(key)">{{ value }}</span>
+                <span v-else-if="['inference_time'].includes(key)">{{ strNumberTime(value) }}</span>
+                <span v-else-if="['load_act','load_weight','memory_access','load_kv_cache','store_act','store_kv_cache'].includes(key)">{{ strNumber_1024(value) }}B</span>
+                <span v-else>{{ strNumber(value) }}</span>
             </div>
             <div class="float-node-info-item">
                 <canvas id="lineChart" width="300" height="200"></canvas>
@@ -38,7 +39,7 @@ import { watch, inject, ref } from 'vue'
 import { graph_config } from "./graphs/graph_config.js"
 // import { get_roofline_options } from "./graphs/roofline_config.js"
 import axios from 'axios'
-import { strNumber, strNumberTime } from '@/utils.js';
+import { strNumber, strNumberTime, strNumber_1024 } from '@/utils.js';
 import { Chart, registerables } from 'chart.js';
 
 import annotationPlugin from 'chartjs-plugin-annotation';
