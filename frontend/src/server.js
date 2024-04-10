@@ -1,16 +1,18 @@
 import axios from 'axios'
 
-function update_avaliable_model_hardwares(avaliable_hardwares, avaliable_model_ids, ip_port) {
+async function update_avaliable_model_hardwares(avaliable_hardwares, avaliable_model_ids, ip_port) {
     const url = 'http://' + ip_port.value + '/get_avaliable'
-    axios.get(url).then(function (response) {
+    try {
+        const response = await axios.get(url);
         console.log("update_avaliable_model_hardwares",response);
         avaliable_hardwares.value = response.data.avaliable_hardwares
         avaliable_model_ids.value = response.data.avaliable_model_ids
-    })
-        .catch(function (error) {
-            console.log("error in get_avaliable");
-            console.log(error);
-        });
+        return true
+    } catch (error) {
+        console.log("error in get_avaliable");
+        console.log(error);
+        return false
+    }
 }
 
 async function update_frontend_params_info(frontend_params_info, model_id, ip_port) {
@@ -27,9 +29,11 @@ async function update_frontend_params_info(frontend_params_info, model_id, ip_po
             console.log(param_info);
             param_info.value = param_info.default
         }
+        return true
     } catch (error) {
         console.log("error in get_frontend_params_info");
         console.log(error);
+        return false
     }
 
 }

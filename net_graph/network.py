@@ -36,7 +36,7 @@ class Network:
             print(f"=== module {module.name} ===")
             module.print_graph()
 
-    def analyze_forward(self,x_shape_dict):
+    def analyze_forward(self,x_shape_dict,extra_args={}):
         """
         Analyze the forward pass of the model.
         """
@@ -52,7 +52,7 @@ class Network:
                 else:
                     raise ValueError(f"Input shape {input_name} not found")
 
-            rst=module.analyze_forward(module_input_dict)
+            rst=module.analyze_forward(module_input_dict,extra_args)
             module_name=module.name
             for op_name,op_info in rst.items():
                 new_name=f"{module_name}.{op_name}"

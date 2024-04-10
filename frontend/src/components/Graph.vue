@@ -15,11 +15,11 @@
         </div>
         <div class="float-node-info-window">
             <div v-if="selected_node_id" class="float-node-info-item">
-                <strong>{{ selected_node_id }}</strong>
+                <strong>{{ selected_node_id }}: {{ all_node_info[selected_node_id]['layer_type'] }}</strong>
             </div>
             <div v-for="(value, key) in all_node_info[selected_node_id]" :key="key" class="float-node-info-item">
                 <span>{{ key }}: </span>
-                <span v-if="['bound','output_shape'].includes(key)">{{ value }}</span>
+                <span v-if="['bound','output_shape','layer_type'].includes(key)">{{ value }}</span>
                 <span v-else-if="['inference_time'].includes(key)">{{ strNumberTime(value) }}</span>
                 <span v-else-if="['load_act','load_weight','memory_access','load_kv_cache','store_act','store_kv_cache'].includes(key)">{{ strNumber_1024(value) }}B</span>
                 <span v-else>{{ strNumber(value) }}</span>

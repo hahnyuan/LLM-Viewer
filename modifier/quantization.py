@@ -7,8 +7,8 @@ class QuantAct(BaseModifier):
         
 
     def modify_node(self, node, node_info):
-        node_info["load_act"] = node_info["n_load_act"] * self.bitwidth / 8
-        node_info["store_act"] = node_info["n_store_act"] * self.bitwidth / 8
+        node_info["load_act"] = node_info.get("n_load_act",0) * self.bitwidth / 8
+        node_info["store_act"] = node_info.get("n_store_act",0) * self.bitwidth / 8
     
     def run(self,analyze_rsts):
         for name, (node, node_info) in analyze_rsts.items():
@@ -17,11 +17,11 @@ class QuantAct(BaseModifier):
 
 class QuantWeight(QuantAct):
     def modify_node(self, node, node_info):
-        node_info["load_weight"] = node_info["n_load_weight"] * self.bitwidth / 8
+        node_info["load_weight"] = node_info.get("n_load_weight",0) * self.bitwidth / 8
 
 class  QuantKV(QuantAct):
     def modify_node(self, node, node_info):
         if "n_load_kv_cache" in node_info:
-            node_info["load_kv_cache"] = node_info["n_load_kv_cache"] * self.bitwidth / 8
+            node_info["load_kv_cache"] = node_info.get("n_load_kv_cache",0) * self.bitwidth / 8
         if "n_store_kv_cache" in node_info:
-            node_info["store_kv_cache"] = node_info["n_store_kv_cache"] * self.bitwidth / 8
+            node_info["store_kv_cache"] = node_info.get("n_store_kv_cache",0) * self.bitwidth / 8

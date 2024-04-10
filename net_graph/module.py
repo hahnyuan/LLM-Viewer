@@ -10,7 +10,7 @@ class Node:
             setattr(self,k,v)
 
 
-    def analyze_node(self,input_shapes) -> typing.Dict:
+    def analyze_node(self,input_shapes,extra_args) -> typing.Dict:
         rst={
             "OPS":0,
             "n_load_weight":0,
@@ -69,7 +69,7 @@ class Module:
         for node in self.nodes:
             print(node)
 
-    def analyze_forward(self,x_shape_dict):
+    def analyze_forward(self,x_shape_dict,extra_args={}):
         """
         Analyze the forward pass of the model.
         """
@@ -85,7 +85,7 @@ class Module:
                 else:
                     raise ValueError(f"Input shape {input_name} not found")
 
-            op_info=node.analyze_node(node_input_shapes)
+            op_info=node.analyze_node(node_input_shapes,extra_args)
             shape_dict[node.name]=op_info["output_shape"]
             rsts[node.name]=(node,op_info)
         return rsts

@@ -130,15 +130,14 @@ class LLMAnalyzer(BaseAnalyzer):
 
         if stage=="prefill":
             modifiers=[
-                MakeKVLoadStore(),
             ]
             x_shape_dict={"input_inds":[batchsize, seqlen]}
+            extra_args={"kv_seqlen":0}
         elif stage=="decode":
             modifiers=[
-                MakeKVLoadStore(),
-                AddDecodeKVLoad(kv_seqlen=seqlen,n_parallel_decode=n_parallel_decode),
             ]
             x_shape_dict={"input_inds":[1, n_parallel_decode]}
+            extra_args={"kv_seqlen":seqlen}
         else:
             #TODO write the chat stage
             raise ValueError(f"stage {stage} is not supported")
@@ -149,7 +148,7 @@ class LLMAnalyzer(BaseAnalyzer):
                 QuantKV(kv_bit),
                 CalcMemoryAccess()])
 
-        layer_results=self.net_graph.analyze_forward(x_shape_dict)
+        layer_results=self.net_graph.analyze_forward(x_shape_dict,extra_args)
 
         for modifier in modifiers:
             modifier.run(layer_results)

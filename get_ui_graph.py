@@ -104,6 +104,7 @@ def analyze_get_ui_graph(model_id, hardware, frontend_params_info):
             if name not in result["layers"]:
                 continue
             info=result["layers"][name][1]
+            info["layer_type"]=node.__class__.__name__
             numpy_value_to_python(info)
             
             nodes.append({

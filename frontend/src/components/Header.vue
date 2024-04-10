@@ -73,7 +73,10 @@ const is_show_help = ref(false)
 
 onMounted(() => {
     console.log("Header mounted")
-    update_avaliable_model_hardwares(avaliable_hardwares, avaliable_model_ids, ip_port)
+    var is_updated=update_avaliable_model_hardwares(avaliable_hardwares, avaliable_model_ids, ip_port)
+    if (is_updated) {
+        update_frontend_params_info(frontend_params_info, model_id, ip_port)
+    }
 })
 
 var select_model_id = ref('meta-llama/Llama-2-7b-hf');
@@ -81,8 +84,10 @@ watch(select_model_id, (n) => {
     console.log("select_model_id", n)
     model_id.value = n
     frontend_params_info.value= {}
-    update_frontend_params_info(frontend_params_info, model_id, ip_port)
-    global_update_trigger.value += 1
+    var is_updated = update_frontend_params_info(frontend_params_info, model_id, ip_port)
+    if (is_updated) {
+        global_update_trigger.value += 1
+    }
 })
 
 var select_hardware = ref('nvidia_A6000');
@@ -94,7 +99,10 @@ watch(select_hardware, (n) => {
 
 watch(ip_port, (n) => {
     console.log("ip_port", n)
-    update_avaliable_model_hardwares(avaliable_hardwares, avaliable_model_ids, ip_port)
+    var is_updated=update_avaliable_model_hardwares(avaliable_hardwares, avaliable_model_ids, ip_port)
+    if (is_updated) {
+        update_frontend_params_info(frontend_params_info, model_id, ip_port)
+    }
 })
 
 
