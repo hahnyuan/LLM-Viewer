@@ -29,6 +29,14 @@
             </div>
         </div>
     </div>
+    <div class="float-network-graph-window"> 
+        <!-- cetering -->
+        <div style="text-align: center;" >Network Graph</div>
+        <div class="fill_parent_div" id="fill_parent_div">
+        <div id="networkGraphContainer" @resize="handleResize"></div>   
+        </div>
+       
+    </div>
 </template>
 
 <script setup>
@@ -36,7 +44,7 @@ import G6 from "@antv/g6"
 
 import { onMounted, onBeforeUpdate, provide } from 'vue'
 import { watch, inject, ref } from 'vue'
-import { graph_config } from "./graphs/graph_config.js"
+import { graph_config,network_graph_config } from "./graphs/graph_config.js"
 // import { get_roofline_options } from "./graphs/roofline_config.js"
 import axios from 'axios'
 import { strNumber, strNumberTime, strNumber_1024 } from '@/utils.js';
@@ -59,6 +67,10 @@ var selected_module=null
 
 var graph = null;
 var graph_data;
+
+var network_graph = null;
+var network_graph_data;
+
 const all_node_info = ref({})
 Chart.register(...registerables, annotationPlugin);
 
@@ -108,6 +120,13 @@ function graphUpdate() {
         }
         network_results.value = response.data.network_results
         hardware_info = response.data.hardware_info
+
+        network_graph_data = response.data.network_graph
+        network_graph.clear()
+        network_graph.data(network_graph_data)
+        network_graph.render()
+        // network_graph.fitView();
+
 
         const old_ids = new Set(graph.getNodes().map(node => node.get('id')));
         const new_ids = new Set(graph_data.nodes.map(node => node.id));
@@ -336,9 +355,20 @@ onMounted(() => {
     graph.on('canvas:click', (event) => {
         release_select()
     });
+    
+    var containerElement = document.getElementById('fill_parent_div');
+    network_graph_config.width = containerElement.offsetWidth;
+    network_graph_config.height = containerElement.offsetHeight;
+    network_graph= new G6.Graph(network_graph_config);
+    network_graph.on('node:click', (event) => {
+        const { item } = event;
+        const node = item.getModel();
+        click_network_node(node);
+    });
+
     graphUpdate(true);
     graph.render();
-
+    network_graph.render();
 
 })
 
@@ -351,6 +381,14 @@ function clickNode(node) {
         update_roofline_model();
     }, 100);
 }
+
+function click_network_node(node){
+    console.log(node);
+    const nodeId = node.id;
+    selected_module=nodeId
+    graph_data = module_graphs[selected_module]
+}
+
 </script>
 
 <style scoped>
@@ -403,4 +441,24 @@ function clickNode(node) {
     padding: 3px;
     border-top: 1px solid #e2e2e2;
 }
+
+.float-network-graph-window {
+    position: relative;
+    top: 0%;
+    right: 0%;
+    /* width: 12%;
+    height: 42%; */
+    width: 15%;
+    height: 100%;
+    background-color: #ffffff;
+    border: 5px solid #f1f1f1b7;
+    padding: 5px;
+    /* overflow-y: auto; */
+}
+
+.fill_parent_div{
+    width: 100%;
+    height: 100%;
+}
+
 </style>

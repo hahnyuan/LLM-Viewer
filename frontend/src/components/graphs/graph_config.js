@@ -201,3 +201,87 @@ export const graph_config = {
       controlPoints: true,
     },
 }
+
+
+export const network_graph_config = {
+  container: 'networkGraphContainer', // String | HTMLElement，必须，在 Step 1 中创建的容器 id 或容器本身
+  width: 100, // Number，必须，图的宽度
+  height: 100, // Number，必须，图的高度
+  fitView: true,
+  defaultEdge: {
+      // type: 'line',
+      type: 'polyline',
+      // type: 'quadratic',
+      sourceAnchor: 1,
+      // // 该边连入 target 点的第 0 个 anchorPoint，
+      targetAnchor: 0,
+      style: {
+
+          endArrow: {
+              path: G6.Arrow.triangle(5, 10), // 使用内置箭头路径函数，参数为箭头的 宽度、长度、偏移量（默认为 0，与 d 对应）
+              fill: "#aaaaaa",
+              opacity: 50,
+          },
+          stroke: "#000000",
+      },
+  },
+  defaultNode: {
+      // ... 其他属性
+      // type: 'card-node',
+      type: 'modelRect',
+      // type: 'rect',
+      // hight: 200,
+      size: [200, 60], // 设置节点的默认宽度和高度
+      anchorPoints: [
+          [0.5, 0],
+          [0.5, 1]
+      ],
+    //   anchorPoints: [
+    //     [0, 0.5],
+    //     [1, 0.5],
+    // ],
+      logoIcon: {
+        show: false,
+      },
+      stateIcon: {
+        show: false,
+        img:
+          'https://gw.alipayobjects.com/zos/basement_prod/c781088a-c635-452a-940c-0173663456d4.svg',
+      },
+      
+      // style: {
+      //     radius: 5,
+      //     // fill: '#C6E5FF',
+      //     // stroke: '#5B8FF9',
+      // },
+      labelCfg:{
+        offset: 15,
+        style: {
+          fill: '#000000',
+          fontSize: 20,
+          stroke: '#E7E7E7',
+        }
+      },
+      descriptionCfg: {
+        style: {
+          fill: '#656565',
+          fontSize: 14,
+        },
+      },
+      
+  },
+  // fitView: true,
+  // plugins: [minimap], // 将 minimap 实例配置到图上
+  modes: {
+      // default: ['drag-canvas', 'zoom-canvas', 'drag-node', 'lasso-select'], // 允许拖拽画布、放缩画布、拖拽节点
+      default: ['drag-canvas', 'zoom-canvas',  'lasso-select'],
+  },
+  layout: {
+    type: 'dagre',
+    // rankdir: 'LR', // The center of the graph by default
+    // align: 'UR',
+    nodesep: 10,
+    ranksep: 20,
+    controlPoints: true,
+  },
+}

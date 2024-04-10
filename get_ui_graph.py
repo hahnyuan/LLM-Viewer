@@ -56,7 +56,7 @@ def analyze_get_ui_graph(model_id, hardware, frontend_params_info):
 
     kwargs={}
     for param in frontend_params_info:
-        value=param["value"]
+        value=param.get("value",param["default"])
         if param["type"]=="int":
             value=int(value)
         kwargs[param["name"]]=value
@@ -81,6 +81,8 @@ def analyze_get_ui_graph(model_id, hardware, frontend_params_info):
 
 
     module_graphs={}
+    network_nodes=[]
+    network_edges=[]
 
     for module in network.modules:
         module_name=module.name
@@ -121,5 +123,16 @@ def analyze_get_ui_graph(model_id, hardware, frontend_params_info):
 
         module_graphs[module_name] = {"nodes": nodes, "edges": edges}
 
+        network_node={
+            "label": module_name,
+            "id": module_name
+        }
+        network_nodes.append(network_node)
+        for input_name in module.input_names:
+            if '.' in input_name:
+                source=input_name.split('.')[0]
+                edge = {"source": source, "target": module_name}
+                network_edges.append(edge)
+    network_graph={"nodes":network_nodes,"edges":network_edges}
     network_results = numpy_value_to_python(result["network"])
-    return module_graphs, network_results, hardware_info
+    return network_graph,module_graphs, network_results, hardware_info

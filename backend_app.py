@@ -15,12 +15,13 @@ def index():
 
 @app.route("/get_graph", methods=["POST"])
 def get_graph():
-    module_graphs, network_results, hardware_info = analyze_get_ui_graph(
+    network_graph, module_graphs, network_results, hardware_info = analyze_get_ui_graph(
         request.json["model_id"],
         request.json["hardware"],
         request.json["frontend_params_info"],
     )
     return {
+        "network_graph": network_graph,
         "module_graphs": module_graphs,
         "network_results": network_results,
         "hardware_info": hardware_info,
