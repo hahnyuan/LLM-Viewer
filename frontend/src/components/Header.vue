@@ -35,7 +35,7 @@
         <!-- item -->
         <p>LLM-Viewer is a open-sourced tool to visualize the LLM model and analyze the deployment on hardware devices.</p>
         <p>
-            At the center of the page, you can see the graph of the LLM model. Click the node to see the detail of the node.
+            At the center of the page, you can see the graph a module in the network. Click the node to see the detail of the node.
         </p>
         <p>↑ At the top of the page, you can set the LLM model, hardware devices, and server.
             If you deploy the LLM-Viewer localhost, you can select the localhost server.
@@ -45,6 +45,9 @@
         </p>
         <p>
             ↙ The Network-wise Analysis result is demonstrated in the left pannel.
+        </p>
+        <p>
+            → Select module to change differnt module in the network in the right pannel.
         </p>
         <p>
             We invite you to read our paper <a class="hover-bold" href="https://arxiv.org/pdf/2402.16363.pdf" target="_blank">LLM Inference Unveiled: Survey and Roofline Model Insights</a>.

@@ -31,7 +31,7 @@
     </div>
     <div class="float-network-graph-window"> 
         <!-- cetering -->
-        <div style="text-align: center;" >Network Graph</div>
+        <div style="text-align: center;" >Select Module</div>
         <div class="fill_parent_div" id="fill_parent_div">
         <div id="networkGraphContainer" @resize="handleResize"></div>   
         </div>
@@ -436,7 +436,7 @@ function click_network_node(node){
     }
     graph.render()
     setTimeout(() => {
-        graph.fitView();
+        graph.focusItem(node.id, true);
     }, 10);
 }
 
@@ -499,7 +499,7 @@ function click_network_node(node){
     right: 0%;
     /* width: 12%;
     height: 42%; */
-    width: 15%;
+    width: 20%;
     height: 100%;
     background-color: #ffffff;
     border: 5px solid #f1f1f1b7;
