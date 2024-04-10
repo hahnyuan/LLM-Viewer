@@ -5,6 +5,7 @@ class Network:
     def __init__(self, modules: typing.List[Module]):
         self.modules = modules
         self.topo_reorder()
+        self.max_n_act=None
 
     def topo_reorder(self):
         """
@@ -42,6 +43,7 @@ class Network:
         """
         shape_dict={}
         rsts={}
+        max_n_act=0
         for module in self.modules:
             module_input_dict={}
             for input_name in module.input_names:
@@ -52,12 +54,14 @@ class Network:
                 else:
                     raise ValueError(f"Input shape {input_name} not found")
 
-            rst=module.analyze_forward(module_input_dict,extra_args)
+            rst,module_max_n_act=module.analyze_forward(module_input_dict,extra_args)
+            max_n_act=max(max_n_act,module_max_n_act)
             module_name=module.name
             for op_name,op_info in rst.items():
                 new_name=f"{module_name}.{op_name}"
                 shape_dict[new_name]=op_info[1]["output_shape"]
                 rsts[new_name]=op_info
+        self.max_n_act=max_n_act
         return rsts
 
     

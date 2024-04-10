@@ -1,5 +1,5 @@
 import typing
-
+import numpy as np
 
 class Node:
     def __init__(self, name: str, input_names=[], attrs={}):
@@ -28,6 +28,7 @@ class Module:
         self.name=name
         self.input_names=self.get_module_input_names(nodes)
         self.nodes=self.get_node_topo_order(nodes)
+        self.max_n_act=None
 
     def get_module_input_names(self,nodes):
         all_input=set()
@@ -73,8 +74,20 @@ class Module:
         """
         Analyze the forward pass of the model.
         """
+        node_output_nodes={}
+        # get output nodes
+        for node in self.nodes:
+            for input_name in node.input_names:
+                if input_name in node_output_nodes:
+                    node_output_nodes[input_name].append(node)
+                else:
+                    node_output_nodes[input_name]=[node]
+
         shape_dict={}
         rsts={}
+        remain_shape_dict={key:value for key,value in x_shape_dict.items()}
+        max_n_act=sum([np.prod(shape) for shape in x_shape_dict.values()])
+        
         for node in self.nodes:
             node_input_shapes=[]
             for input_name in node.input_names:
@@ -88,7 +101,17 @@ class Module:
             op_info=node.analyze_node(node_input_shapes,extra_args)
             shape_dict[node.name]=op_info["output_shape"]
             rsts[node.name]=(node,op_info)
-        return rsts
+
+            # process act
+            remain_shape_dict[node.name]=op_info["output_shape"]
+            for input_name in node.input_names:
+                node_output_nodes[input_name].remove(node)
+                if len(node_output_nodes[input_name])==0:
+                    remain_shape_dict.pop(input_name)
+            now_act=sum([np.prod(shape) for shape in remain_shape_dict.values()])
+            max_n_act=max(max_n_act,now_act)
+        self.max_n_act=max_n_act
+        return rsts,max_n_act
 
     def __repr__(self) -> str:
         return f"{self.name}({self.input_names})"

@@ -6,6 +6,11 @@ NETWORK_WISE_NAMES = [
     "OPs",
     "memory_access",
     "inference_time",
+    "load_act",
+    "load_kv_cache",
+    "load_weight",
+    "store_act",
+    "store_kv_cache"
 ]
 
 class LLMAnalyzer(BaseAnalyzer):
@@ -18,20 +23,20 @@ class LLMAnalyzer(BaseAnalyzer):
             "description": "Stage of the model, either prefill or decode"
         },
         {
-            "name": "seqlen",
-            "type": "int",
-            "min": 1,
-            "max": 4096,
-            "default": 1024,
-            "description": "Sequence length in prefill stage, and prefilled sequence length in decode stage"
-        },
-        {
             "name": "batchsize",
             "type": "int",
             "min": 1,
             "max": 128,
             "default": 1,
             "description": "Batch size"
+        },
+        {
+            "name": "seqlen",
+            "type": "int",
+            "min": 1,
+            "max": 4096,
+            "default": 1024,
+            "description": "Sequence length in prefill stage, and prefilled sequence length in decode stage"
         },
         {
             "name": "n_parallel_decode",
@@ -157,6 +162,24 @@ class LLMAnalyzer(BaseAnalyzer):
             for data_name in NETWORK_WISE_NAMES:
                 if data_name in layer_info:
                     network_results[data_name] += layer_info[data_name]
+        # compute memory consumption
+        n_weight=0
+        n_kv_cache=0
+        for name, (node, node_info) in layer_results.items():
+            n_weight+=node_info.get("n_weight",0)
+            n_kv_cache+=node_info.get("n_store_kv_cache",0)+node_info.get("n_load_kv_cache",0)
+        max_n_act=self.net_graph.max_n_act
+        memory_consumption_weight=n_weight*w_bit/8
+        memory_consumption_kv_cache=n_kv_cache*kv_bit/8
+        memory_consumption_tmp_act=max_n_act*a_bit/8
+
+        memory_consumption=memory_consumption_weight+memory_consumption_kv_cache+memory_consumption_tmp_act
+        network_results.update({
+            "memory_consumption": memory_consumption,
+            "memory_consumption_weight": memory_consumption_weight,
+            "memory_consumption_kv_cache": memory_consumption_kv_cache,
+            "memory_consumption_tmp_act": memory_consumption_tmp_act
+        })
 
         results={"layers":layer_results,"network":network_results}
         return results

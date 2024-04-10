@@ -19,7 +19,7 @@ class QuantWeight(QuantAct):
     def modify_node(self, node, node_info):
         node_info["load_weight"] = node_info.get("n_load_weight",0) * self.bitwidth / 8
 
-class  QuantKV(QuantAct):
+class QuantKV(QuantAct):
     def modify_node(self, node, node_info):
         if "n_load_kv_cache" in node_info:
             node_info["load_kv_cache"] = node_info.get("n_load_kv_cache",0) * self.bitwidth / 8
