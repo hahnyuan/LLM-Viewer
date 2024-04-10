@@ -100,6 +100,7 @@ def analyze_get_ui_graph(model_id, hardware, frontend_params_info):
                 "label": show_input_name,
                 "description": f"from: {source}",
                 "id": input_name,
+                "info":{"layer_type": "Input"}
             }
             nodes.append(input_node)
 
@@ -135,4 +136,4 @@ def analyze_get_ui_graph(model_id, hardware, frontend_params_info):
                 network_edges.append(edge)
     network_graph={"nodes":network_nodes,"edges":network_edges}
     network_results = numpy_value_to_python(result["network"])
-    return network_graph,module_graphs, network_results, hardware_info
+    return network_graph, module_graphs, network_results, hardware_info

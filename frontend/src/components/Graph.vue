@@ -115,6 +115,7 @@ function graphUpdate() {
             }
         }
         graph_data = module_graphs[selected_module]
+        
         for (let i = 0; i < graph_data.nodes.length; i++) {
             all_node_info.value[graph_data.nodes[i].id] = graph_data.nodes[i].info;
         }
@@ -154,6 +155,9 @@ function graphUpdate() {
         setTimeout(() => {
             graph.fitView();
         }, 10);
+        now_selected_module_node=null
+        now_selected_module_prev_color=null
+        click_network_node_change_color(selected_module)
 
     })
         .catch(function (error) {
@@ -336,6 +340,8 @@ function update_roofline_model() {
 }
 
 function release_select() {
+    nowFocusNode = null
+    nowFocusNodePrevColor = null
     selected_node_id.value = ""
     update_roofline_model()
 }
@@ -382,11 +388,56 @@ function clickNode(node) {
     }, 100);
 }
 
+
+var now_selected_module_node = null;
+var now_selected_module_prev_color = null;
+
+function click_network_node_change_color(node_id){
+    if (now_selected_module_node) {
+        // console.log("nowFocusNodePrevColor", nowFocusNodePrevColor)
+        now_selected_module_node.update({
+            style: {
+                fill: now_selected_module_prev_color,
+            },
+        });
+    }
+
+    const node2 = network_graph.findById(node_id)
+    
+
+    if (node2) {
+        // 高亮
+        if (node2.getModel().style.fill) {
+            now_selected_module_prev_color = node2.getModel().style.fill
+        } else {
+            now_selected_module_prev_color = "#ffffff"
+        }
+        node2.update({
+            style: {
+                fill: "#dffdff",
+            },
+        });
+        now_selected_module_node=node2
+    }
+}
+
 function click_network_node(node){
     console.log(node);
-    const nodeId = node.id;
-    selected_module=nodeId
+    if (selected_module==node.id){
+        return
+    }
+    selected_module=node.id
+    click_network_node_change_color(node.id)
+    release_select()
     graph_data = module_graphs[selected_module]
+    graph.data(graph_data)
+    for (let i = 0; i < graph_data.nodes.length; i++) {
+        all_node_info.value[graph_data.nodes[i].id] = graph_data.nodes[i].info;
+    }
+    graph.render()
+    setTimeout(() => {
+        graph.fitView();
+    }, 10);
 }
 
 </script>
