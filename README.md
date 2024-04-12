@@ -59,6 +59,10 @@ NOTE: The time estimated by the roofline model represents the theoretical perfor
 The purpose of creating this tool is to help readers gain a clearer understanding of the key factors that influence LLM inference. 
 Only the relative relationships can be referenced. 
 
+## Onnx Profile Info
+
+![Onnx Profile Info](figs/onnx_profile_info.png)
+
 ## Citation
 
 If you are using LLM-Viewer in your research, please cite our paper:
