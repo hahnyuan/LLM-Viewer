@@ -7,7 +7,7 @@ def get_llama_network_graph(model_id, manual_params=None,use_flashattention=Fals
     if manual_params is not None:
         p=manual_params
     else:
-        p=AutoConfig.from_pretrained(model_id)
+        p=AutoConfig.from_pretrained(model_id,trust_remote_code=True)
 
     modules=[]
     embedding=Module(name="embedding", nodes=[
