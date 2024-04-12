@@ -2,3 +2,4 @@ output
 tmp
 *.pyc
 .vscode
+*.onnx

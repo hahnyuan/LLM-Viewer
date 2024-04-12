@@ -1,4 +1,5 @@
 from net_graph.module import Module
+from net_parsers.onnx.graph import Graph
 import typing
 
 class Network:
@@ -64,4 +65,28 @@ class Network:
         self.max_n_act=max_n_act
         return rsts
 
-    
+
+class OnnxNetwork:
+    def __init__(self, graph: Graph):
+        self.graph = graph   
+
+    def print_graph(self):
+        "NOTE:It's not accurate to print by module, although can split name by _ or / or ."
+        self.graph.print_graph()
+
+    def analyze_forward(self, x_shape_dict: dict={}):
+        """
+        Analyze the forward pass of the model.
+        x_shape_dict: {name: List(int)}
+        """
+        if x_shape_dict!={}:
+            dummy_input = {name:np.random.randn(*shape) for name,shape in x_shape_dict.items()}
+        else:
+            dummy_input = None
+        self.graph.shape_infer(dummy_input)
+        self.graph.profile()
+        self.graph.print_profile_info()
+
+        profile_results = {"layers": {name:node.profile_info for name,node in self.graph.nodemap.items()}, 
+                            "network": self.graph.graph_profile_info}
+        return profile_results

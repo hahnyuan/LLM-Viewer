@@ -1,5 +1,6 @@
+from .utils import Registry, GlobalVars
 
+NODEPROFILER_REGISTRY = Registry('nodeprofiler')
+NODE_REGISTRY = Registry('NODE')
 
-
-def get_onnx_network_graph(file_path):
-    pass
+GLOBAL_VARS = GlobalVars('Shared')
