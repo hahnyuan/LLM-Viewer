@@ -102,7 +102,7 @@ class LLMAnalyzer(BaseAnalyzer):
         return is a dict with the following format:
         {
             "layers": {
-                "layer_name1": {
+                "layer_name1": (node, {
                         "OPs": "",
                         "memory_access": "",
                         "arithmetic_intensity": "",
@@ -115,7 +115,7 @@ class LLMAnalyzer(BaseAnalyzer):
                         "store_kv_cache": "",
                         "inference_time": "",
                         ...
-                }
+                })
                 "layer_name2": ...,
                 ...
             }
