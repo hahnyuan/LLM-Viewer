@@ -12,7 +12,7 @@ class Node:
 
     def analyze_node(self,input_shapes,extra_args) -> typing.Dict:
         rst={
-            "OPS":0,
+            "OPs":0,
             "n_load_weight":0,
             "n_load_act":0,
             "n_store_act":0,
