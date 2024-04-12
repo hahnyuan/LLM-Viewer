@@ -4,34 +4,56 @@ from modifier.memory_access import CalcMemoryAccess
 
 
 class OnnxAnalyzer(BaseAnalyzer):
-    frontend_params_info={
-        "model_path": "",
-        "x_shape_dict": {},
-        "w_bit": {
+    frontend_params_info=[
+        {
+            "name": "model_path",
+            "type": "str",
+            "default": "data/onnx/light_squeezenet.onnx",
+            "description": "Path to the model"
+        },
+        {
+            "name": "x_shape_dict",
+            "type": "str",
+            "default": "",
+            "description": "Input shape if the model use input shape different from the onnx file recorded"
+        },
+        {
+            "name": "w_bit",
             "type": "int",
             "min": 1,
             "max": 16,
             "default": 16,
             "description": "Bitwidth for weights"
         },
-        "a_bit": {
+        {
+            "name": "a_bit",
             "type": "int",
             "min": 1,
             "max": 16,
             "default": 16,
             "description": "Bitwidth for activations"
         },
-        "compute_dtype": {
+        {
+            "name": "kv_bit",
+            "type": "int",
+            "min": 1,
+            "max": 16,
+            "default": 16,
+            "description": "Bitwidth for key and value cache"
+        },
+        {
+            "name": "compute_dtype",
             "type": "select",
             "choices": ["FP16", "INT8"],
             "default": "FP16",
             "description": "Compute data type"
-        },
-    }
+        }
+    ]
 
     def analyze(
         self,
-        x_shape_dict={},
+        model_path="",
+        x_shape_dict="",
         w_bit=16,
         a_bit=16,
         compute_dtype="FP16"

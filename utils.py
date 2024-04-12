@@ -1,5 +1,18 @@
+import numpy as np
 
-
+def numpy_value_to_python(d):
+    for key in d:
+        if isinstance(d[key],np.ndarray):
+            d[key]=d[key].tolist()
+        if isinstance(d[key],np.int64):
+            d[key]=int(d[key])
+        if isinstance(d[key],np.int32):
+            d[key]=int(d[key])
+        if isinstance(d[key],np.float32):
+            d[key]=float(d[key])
+        if isinstance(d[key],np.float64):
+            d[key]=float(d[key])
+    return d
 
 def str_number_1024(num):
     if num > (1<<40):

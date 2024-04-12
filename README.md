@@ -41,7 +41,7 @@ Clone the LLM-Viewer repository from GitHub:
 ```git clone https://github.com/hahnyuan/LLM-Viewer.git   ```
 
 Install requirements
-```pip install transformers flask flask_cors easydict numpy```
+```pip install transformers flask flask_cors easydict numpy onnx onnxsim```
 
 To analyze an LLM using LLM-Viewer in command line interface (cli), run the following command:
 

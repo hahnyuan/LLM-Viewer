@@ -1,8 +1,15 @@
 from net_graph.module import Module
+import numpy as np
 from net_parsers.onnx.graph import Graph
 import typing
 
-class Network:
+class BaseNetwork:
+    def print_graph(self):
+        raise NotImplementedError
+    def analyze_forward(self,x_shape_dict,extra_args={}):
+        raise NotImplementedError
+
+class Network(BaseNetwork):
     def __init__(self, modules: typing.List[Module]):
         self.modules = modules
         self.topo_reorder()
@@ -66,7 +73,7 @@ class Network:
         return rsts
 
 
-class OnnxNetwork:
+class OnnxNetwork(BaseNetwork):
     def __init__(self, graph: Graph):
         self.graph = graph   
 
@@ -74,7 +81,7 @@ class OnnxNetwork:
         "NOTE:It's not accurate to print by module, although can split name by _ or / or ."
         self.graph.print_graph()
 
-    def analyze_forward(self, x_shape_dict: dict={}):
+    def analyze_forward(self, x_shape_dict: dict={}, extra_args={}):
         """
         Analyze the forward pass of the model.
         x_shape_dict: {name: List(int)}

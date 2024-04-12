@@ -1,6 +1,7 @@
 from analyzers.base_analyzer import BaseAnalyzer
 from modifier.quantization import QuantAct, QuantWeight, QuantKV
 from modifier.memory_access import CalcMemoryAccess
+from utils import str_number,str_number_1024,numpy_value_to_python
 
 NETWORK_WISE_NAMES = [
     "OPs",
@@ -184,5 +185,61 @@ class LLMAnalyzer(BaseAnalyzer):
         results={"layers":layer_results,"network":network_results}
         return results
 
-    def set_hooks(self, model):
-        self.net_graph = model
+    def get_ui_graph(self,result):
+
+        module_graphs={}
+        network_nodes=[]
+        network_edges=[]
+
+        for module in self.net_graph.modules:
+            module_name=module.name
+            nodes = []
+            edges = []
+
+
+            for input_name in module.input_names:
+                if '.' in input_name:
+                    source,show_input_name=input_name.split('.')
+                else:
+                    show_input_name=input_name
+                    source="input"
+                input_node = {
+                    "label": show_input_name,
+                    "description": f"from: {source}",
+                    "id": input_name,
+                    "info":{"layer_type": "Input"}
+                }
+                nodes.append(input_node)
+
+            for node in module.nodes:
+                name=f"{module_name}.{node.name}"
+                if name not in result["layers"]:
+                    continue
+                info=result["layers"][name][1]
+                info["layer_type"]=node.__class__.__name__
+                numpy_value_to_python(info)
+                
+                nodes.append({
+                    "label": node.name,
+                    "id": node.name,
+                    "description": f"OPs:{str_number(info['OPs'])}, Access:{str_number_1024(info['memory_access'])}B",
+                    "info": info,
+                })
+                for input_name in node.input_names:
+                    edge = {"source": input_name, "target": node.name}
+                    edges.append(edge)
+
+            module_graphs[module_name] = {"nodes": nodes, "edges": edges}
+
+            network_node={
+                "label": module_name,
+                "id": module_name
+            }
+            network_nodes.append(network_node)
+            for input_name in module.input_names:
+                if '.' in input_name:
+                    source=input_name.split('.')[0]
+                    edge = {"source": source, "target": module_name}
+                    network_edges.append(edge)
+        network_graph={"nodes":network_nodes,"edges":network_edges}
+        return network_graph, module_graphs

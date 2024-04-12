@@ -52,6 +52,9 @@ import { Chart, registerables } from 'chart.js';
 
 import annotationPlugin from 'chartjs-plugin-annotation';
 
+// import VueDraggableResizable from 'vue-draggable-resizable';
+// import 'vue-draggable-resizable/dist/VueDraggableResizable.css';
+
 const model_id = inject('model_id')
 const hardware = inject('hardware')
 const global_update_trigger = inject('global_update_trigger')
