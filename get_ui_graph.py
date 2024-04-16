@@ -23,7 +23,6 @@ def get_quant_bit(dtype):
 
 
 def analyze_get_ui_graph(model_id, hardware, frontend_params_info):
-
     kwargs={}
     for param in frontend_params_info:
         value=param.get("value",param["default"])
@@ -31,11 +30,8 @@ def analyze_get_ui_graph(model_id, hardware, frontend_params_info):
             value=int(value)
         kwargs[param["name"]]=value
 
-    network_func, analyzer_cls = avaliable_model_ids_sources[model_id]
-    if "use_flashattention" in kwargs:
-        network = network_func(model_id,use_flashattention=kwargs["use_flashattention"])
-    else:
-        network = network_func(model_id)
+    parser_cls, analyzer_cls = avaliable_model_ids_sources[model_id]
+    network = parser_cls(model_id, kwargs).parse()
     hardware_model=get_roofline_model(hardware)
     analyzer=analyzer_cls(network,hardware_model)
 

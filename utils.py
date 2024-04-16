@@ -1,17 +1,28 @@
 import numpy as np
 
 def numpy_value_to_python(d):
-    for key in d:
-        if isinstance(d[key],np.ndarray):
-            d[key]=d[key].tolist()
-        if isinstance(d[key],np.int64):
-            d[key]=int(d[key])
-        if isinstance(d[key],np.int32):
-            d[key]=int(d[key])
-        if isinstance(d[key],np.float32):
-            d[key]=float(d[key])
-        if isinstance(d[key],np.float64):
-            d[key]=float(d[key])
+    if isinstance(d, dict):
+        for key in d:
+            if isinstance(d[key],np.ndarray):
+                d[key]=d[key].tolist()
+            if isinstance(d[key],np.int64):
+                d[key]=int(d[key])
+            if isinstance(d[key],np.int32):
+                d[key]=int(d[key])
+            if isinstance(d[key],np.float32):
+                d[key]=float(d[key])
+            if isinstance(d[key],np.float64):
+                d[key]=float(d[key])
+    elif isinstance(d,np.ndarray):
+        d=d.tolist()
+    elif isinstance(d,np.int64):
+        d=int(d)
+    elif isinstance(d,np.int32):
+        d=int(d)
+    elif isinstance(d,np.float32):
+        d=float(d)
+    elif isinstance(d,np.float64):
+        d=float(d)
     return d
 
 def str_number_1024(num):

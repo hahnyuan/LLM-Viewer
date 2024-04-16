@@ -38,8 +38,9 @@ parser.add_argument("--compute_dtype", type=str, default="FP16", help="compute d
 parser.add_argument("--save_csv_path", type=str, default="output/results.csv", help="save csv path")
 args = parser.parse_args()
 
-network_func, analyzer_cls = avaliable_model_ids_sources[args.model_id]
-network = network_func(args.model_id,use_flashattention=args.use_flashattention)
+
+parser_cls, analyzer_cls = avaliable_model_ids_sources[args.model_id]
+network = parser_cls(args.model_id, {'use_flashattention':args.use_flashattention}).parse()
 hardware_model=get_roofline_model(args.hardware)
 analyzer=analyzer_cls(network,hardware_model)
 

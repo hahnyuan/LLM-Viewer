@@ -460,7 +460,7 @@ class BaseGraph():
         in_valid, tname = self.check_inputs()
         if not in_valid:
             raise ValueError(
-                f"The input tensor {tname}'s shape {self.tensormap[tname].shape2str()} is not valid, Please set it to a valid shape.")
+                f"Please set shape of the dynamic input. The input tensor {tname}'s shape {self.tensormap[tname].shape2str()} is not valid")
         self.shapeinfer_optime_map = {}
         from .utils import timer
         tm = timer()

@@ -113,8 +113,8 @@ class Node():
         self.nextnodes = []
         self.prevnodes = []  # Node instance
         # TODO(qiang.lu)rename to input_names, output_names
-        self.output = []  # output_name_list
-        self.input = []  # input_name list
+        self.output = []  # output_tensor_name list
+        self.input = []  # input_tensor_name list
         self.proto = n
         self.shape_calc = False
         self.attr = {}

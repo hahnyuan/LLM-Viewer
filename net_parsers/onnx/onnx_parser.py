@@ -1,40 +1,38 @@
 import os
 import onnx
 import numpy as np
-from onnxsim import simplify
 
+from ..base_parser import BaseParser
 from net_graph.network import OnnxNetwork
 from .base_graph import OnnxParseConfig
 from .graph import Graph
 
 
-class OnnxParser:
-    def __init__(self, model_path: [str], model_config={}):
-        self.cfg = OnnxParseConfig(model_config)
-        self.modelname = model_path.split('/')[-1]
+class OnnxParser(BaseParser):
+    def __init__(self, model_id, args: dict):
+        super().__init__(model_id, args)
+        
+        self.model_config={"constant_folding": args.get('constant_folding',True),
+                            "node_rename": args.get('node_rename',False),}
+        self.cfg = OnnxParseConfig(self.model_config)
 
-        m = onnx.load_model(model_path)
+        self.model_path = args.get("model_path", "")
+        assert os.path.exists(self.model_path), "model path not exist"
+        self.mproto = onnx.load_model(self.model_path)
+        
+        if args.get("onnx_sim", False):
+            from onnxsim import simplify
+            print("==========simplify onnx begin===========")
+            model_sim, check = simplify(self.mproto)
+            assert check, "Simplified ONNX model could not be validated"
+            print("==========simplify onnx over===========")
+            self.mproto = model_sim
+            self.graph = Graph(model_sim.graph, self.cfg)
+        else:
+            self.graph = Graph(self.mproto.graph, self.cfg)    
 
-        self.valid = True
-
-        # # convert model
-        # print("==========simplify onnx begin===========")
-        # model_sim, check = simplify(m)
-        # assert check, "Simplified ONNX model could not be validated"
-        # print("==========simplify onnx over===========")
-        # self.mproto = model_sim
-        # self.graph = Graph(model_sim.graph, self.cfg)
-
-        self.mproto = m
-        self.graph = Graph(m.graph, self.cfg)
+    def parse(self):
+        return OnnxNetwork(self.graph)
 
     def save_model(self, f: str, shape_only: bool = False, no_shape: bool = False):
         self.graph.save_model(f, shape_only=shape_only, rawmodel=self.mproto, no_shape=no_shape)
-
-
-def get_onnx_network_graph(file_path, model_config={}):
-    # NOTE if onnx input has dynamic axis, dummy_input is necessary in model_config
-    m = OnnxParser(file_path, model_config=model_config)
-    return OnnxNetwork(m.graph)
-
-

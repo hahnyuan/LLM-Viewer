@@ -75,19 +75,21 @@ class Network(BaseNetwork):
 
 class OnnxNetwork(BaseNetwork):
     def __init__(self, graph: Graph):
-        self.graph = graph   
+        self.graph = graph
 
     def print_graph(self):
         "NOTE:It's not accurate to print by module, although can split name by _ or / or ."
         self.graph.print_graph()
 
-    def analyze_forward(self, x_shape_dict: dict={}, extra_args={}):
+    def analyze_forward(self, input_shape_dict: dict={}):
         """
         Analyze the forward pass of the model.
-        x_shape_dict: {name: List(int)}
+        input_shape_dict (dict, optional): {name: List(int)}. Defaults to {}.
+
+        NOTE: if onnx input has dynamic axis, input_shape is necessary in model_config
         """
-        if x_shape_dict!={}:
-            dummy_input = {name:np.random.randn(*shape) for name,shape in x_shape_dict.items()}
+        if input_shape_dict!={}:
+            dummy_input = {name:np.random.randn(*shape) for name,shape in input_shape_dict.items()}
         else:
             dummy_input = None
         self.graph.shape_infer(dummy_input)

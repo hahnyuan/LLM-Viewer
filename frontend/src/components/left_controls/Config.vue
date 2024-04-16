@@ -20,6 +20,9 @@
             <input type="number" v-model.lazy="param_info.value" style="width: 50px;" :min="param_info.min"
                 :max="param_info.max" step="0.01">
         </span>
+        <span class="config_div" v-else-if="param_info.type === 'str'">
+            <input type="text" v-model.lazy="param_info.value">
+        </span>
 
     </div>
     <h2>Network-wise Analysis</h2>

@@ -19,7 +19,10 @@
             </div>
             <div v-for="(value, key) in all_node_info[selected_node_id]" :key="key" class="float-node-info-item">
                 <span>{{ key }}: </span>
-                <span v-if="['bound', 'output_shape', 'layer_type'].includes(key)">{{ value }}</span>
+                <!-- <span>{{ console.log(key, value) }}</span> -->
+                <span
+                    v-if="['bound', 'input_shape', 'output_shape', 'layer_type', 'is_shared_input', 'is_shared_weight'].includes(key)">{{
+            value }}</span>
                 <span v-else-if="['inference_time'].includes(key)">{{ strNumberTime(value) }}</span>
                 <span
                     v-else-if="['load_act', 'load_weight', 'memory_access', 'load_kv_cache', 'store_act', 'store_kv_cache'].includes(key)">{{
@@ -114,13 +117,13 @@ function graphUpdate() {
         module_graphs = response.data.module_graphs //module_graphs is object
         let selected_module = null;
         for (let key in module_graphs) {
-            if (key.includes("transformer")) {
+            // 设置默认展示的是哪个module
+            if (key.includes("transformer") || key == "network") {
                 selected_module = key;
                 break;
             }
         }
         graph_data = module_graphs[selected_module]
-
         for (let i = 0; i < graph_data.nodes.length; i++) {
             all_node_info.value[graph_data.nodes[i].id] = graph_data.nodes[i].info;
         }
