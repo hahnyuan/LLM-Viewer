@@ -2,6 +2,7 @@ import copy
 import math
 import numpy
 import onnx
+from collections import defaultdict
 
 from .node import create_node
 from .tensor import STATIC_TENSOR, DYNAMIC_TENSOR
@@ -62,14 +63,14 @@ class BaseGraph():
 
         self.nodemap = {}  # key: name, value: Node instance
         self.tensormap = {}  # key:name, value: tensor，包括：权重、输入、输出
-        # 每个节点(key)是哪些节点（通常只有1个）的输出，用于构建节点的prevnodes
-        self.producedby = {}  # key: output_name, value: List(node_name)
-        # 每个节点(key)是哪些节点的输入，用于构建节点的nextnodes
-        self.consumedby = {}  # key: tensor_name(without model output), value: List(node_name)
+        # 每个tensor是哪些节点（通常只有1个）的输出，用于构建节点的prevnodes
+        self.producedby = defaultdict(list)  # key: output_name, value: List(node_name)
+        # 每个tensor是哪些节点的输入，用于构建节点的nextnodes
+        self.consumedby = defaultdict(list)  # key: tensor_name(without model output), value: List(node_name)
         self.initials = []  # initializer中的name
         self.dynamics = []
-        self.input = []
-        self.output = []
+        self.input = []  # 模型的输入
+        self.output = []  # 模型的输出
         self.valid_shape = False
         self.valid_profile = False
         self.logger = Logger(self.__class__.__name__, level='warning', fmt='full')
@@ -100,23 +101,11 @@ class BaseGraph():
                 newnode.name = newnode.op_type + '_' + str(self.node_count)
             self.node_count += 1
             
-            for input_name in node.input:
-                # TODO(qiang.lu)refactor: get prevnodes and nextnodes info together after self.nodemap
-                if input_name in self.producedby:
-                    for producer_name in self.producedby[input_name]:
-                        newnode.prevnodes.append(self.nodemap[producer_name])
-                if input_name not in self.consumedby:
-                    self.consumedby[input_name] = []
-                self.consumedby[input_name].append(newnode.name)
-                newnode.input.append(input_name)
-            for output_name in node.output:
-                if output_name not in self.producedby:
-                    self.producedby[output_name] = []
-                self.producedby[output_name].append(newnode.name)
-                newnode.output.append(output_name)
-
+            newnode.input = node.input
+            newnode.output = node.output
+            self.__get_single_node_consumer_producer_info__(newnode.name, newnode)
             self.nodemap[newnode.name] = newnode
-
+        self.__update_prev_nextnodes__()
         self.logger.info(f'Node Init Time Elapsed {tm.stop()}')
 
         tm.start()
@@ -137,7 +126,7 @@ class BaseGraph():
                 # print(f'not int tensormap, output.name: {output.name}')
                 self.tensormap[output.name] = Tensor(output)
 
-        # init dynamic tensor info, update tensormap
+        # update tensormap(init dynamic tensor info)
         for valinfo in g.value_info:
             if valinfo.name not in self.tensormap.keys():
                 # print(f'not int tensormap, valinfo.name: {valinfo.name}')
@@ -146,29 +135,17 @@ class BaseGraph():
         self.logger.info(f'Tensor Init Time Elapsed {tm.stop()}')
 
         tm.start()
-        # dynamic tensor info, update tensormap
-        for key in self.nodemap.keys():
-            node = self.nodemap[key]
+
+        # get prevnodes/nextnodes, also update tensormap(dynamic tensor info)
+        for node_name in self.nodemap.keys():
+            node = self.nodemap[node_name]
             for input_name in node.input:
                 if input_name not in self.tensormap.keys():
-                    # print(f'not int tensormap, nodemap node input_name: {input_name}')
                     self.tensormap[input_name] = Tensor(input_name)
             for output_name in node.output:
                 if output_name not in self.tensormap.keys():
-                    # print(f'not int tensormap, nodemap node output_name: {output_name}')
                     self.tensormap[output_name] = Tensor(output_name)
-                # TODO(qiang.lu)refactor: get prevnodes and nextnodes info together after self.nodemap
-                if output_name in self.consumedby:
-                    for consumer in self.consumedby[output_name]:
-                        self.nodemap[node.name].nextnodes.append(self.nodemap[consumer])
         self.logger.info(f'IO Tensor Init Time Elapsed {tm.stop()}')
-
-        self.sparse_model = False
-        for key in self.tensormap.keys():
-            tensor = self.tensormap[key]
-            if tensor.sparsity is not None and tensor.sparsity['ratio'] > 0.4:
-                self.sparse_model = True
-                break
 
     def __update_nodes_tensors__(self, constant_folding):
         from .utils import timer
@@ -230,6 +207,7 @@ class BaseGraph():
                     if tensor not in self.output:
                         self.output.append(tensor)
         self.__update_consumer_producer__()
+        self.__update_prev_nextnodes__()
         self.logger.info(f'Update Nodes Tensors  Time Elapsed {tm.stop()}')
 
     def __is_node_constant__(self, node):
@@ -281,22 +259,38 @@ class BaseGraph():
                                     search_nodes.append(consumer)
         self.logger.info(f'Constant Search Time Elapsed {tm.stop()}')
 
+    def __update_prev_nextnodes__(self):
+        for node_name in self.nodemap.keys():
+            node = self.nodemap[node_name]
+            self.nodemap[node_name].prevnodes = []
+            self.nodemap[node_name].nextnodes = []
+            for input_name in node.input:
+                if input_name in self.producedby:
+                    for producer in self.producedby[input_name]:
+                        self.nodemap[node_name].prevnodes.append(self.nodemap[producer])
+            for output_name in node.output:
+                if output_name in self.consumedby:
+                    for consumer in self.consumedby[output_name]:
+                        self.nodemap[node_name].nextnodes.append(self.nodemap[consumer])
+
     def __update_consumer_producer__(self):
-        self.producedby = {}
-        self.consumedby = {}
+        self.producedby = defaultdict(list)
+        self.consumedby = defaultdict(list)
         for name in self.nodemap:
             node = self.nodemap[name]
-            for tensor in node.input:
-                if tensor not in self.consumedby:
-                    self.consumedby[tensor] = []
-                self.consumedby[tensor].append(node.name)
-            for tensor in node.output:
-                if tensor not in self.producedby:
-                    self.producedby[tensor] = []
-                self.producedby[tensor].append(node.name)
+            self.__get_single_node_consumer_producer_info__(name, node)
+
+    def __get_single_node_consumer_producer_info__(self, node_name, node):
+        for input_name in node.input:
+            if node_name not in self.consumedby[input_name]:
+                self.consumedby[input_name].append(node_name)
+        for output_name in node.output:
+            if node_name not in self.producedby[output_name]:
+                self.producedby[output_name].append(node_name)
 
     def update_tensor_relations(self):
         self.__update_consumer_producer__()
+        self.__update_prev_nextnodes__()
         self.dynamics = list(self.producedby.keys())
 
     def __find_shape_tensors__(self):
