@@ -855,6 +855,15 @@ class ConstantNode(Node):
     def value_infer(self, intensors: List[Tensor], outtensors: List[Tensor]):
         outtensors[0].update_tensor(self.value)
 
+    def profile(self, intensors: List[Tensor], outtensors: List[Tensor], params_flag_map: dict, inputs_flag_map: dict):
+        "constant node is considered as weight tensor"
+        self.get_base_profile_info(intensors, outtensors, params_flag_map, inputs_flag_map)
+        self.profile_info["n_load_weight"] = 0
+        for tensor in outtensors:
+            self.profile_info["n_load_weight"] += volume(tensor.get_shape())
+        self.profile_info["n_load_act"] = 0
+        self.profile_info["n_store_act"] = 0
+        self.profile_info["OPs"] = 0
 
 @NODE_REGISTRY.register()
 class ConcatNode(Node):
