@@ -19,9 +19,11 @@
             </div>
             <div v-for="(value, key) in all_node_info[selected_node_id]" :key="key" class="float-node-info-item">
                 <span>{{ key }}: </span>
-                <span v-if="['bound','output_shape','layer_type'].includes(key)">{{ value }}</span>
+                <span v-if="['bound', 'output_shape', 'layer_type'].includes(key)">{{ value }}</span>
                 <span v-else-if="['inference_time'].includes(key)">{{ strNumberTime(value) }}</span>
-                <span v-else-if="['load_act','load_weight','memory_access','load_kv_cache','store_act','store_kv_cache'].includes(key)">{{ strNumber_1024(value) }}B</span>
+                <span
+                    v-else-if="['load_act', 'load_weight', 'memory_access', 'load_kv_cache', 'store_act', 'store_kv_cache'].includes(key)">{{
+            strNumber_1024(value) }}B</span>
                 <span v-else>{{ strNumber(value) }}</span>
             </div>
             <div class="float-node-info-item">
@@ -29,13 +31,13 @@
             </div>
         </div>
     </div>
-    <div class="float-network-graph-window"> 
+    <div class="float-network-graph-window">
         <!-- cetering -->
-        <div style="text-align: center;" >Select Module</div>
+        <div style="text-align: center;">Select Module</div>
         <div class="fill_parent_div" id="fill_parent_div">
-        <div id="networkGraphContainer" @resize="handleResize"></div>   
+            <div id="networkGraphContainer" @resize="handleResize"></div>
         </div>
-       
+
     </div>
 </template>
 
@@ -44,7 +46,7 @@ import G6 from "@antv/g6"
 
 import { onMounted, onBeforeUpdate, provide } from 'vue'
 import { watch, inject, ref } from 'vue'
-import { graph_config,network_graph_config } from "./graphs/graph_config.js"
+import { graph_config, network_graph_config } from "./graphs/graph_config.js"
 // import { get_roofline_options } from "./graphs/roofline_config.js"
 import axios from 'axios'
 import { strNumber, strNumberTime, strNumber_1024 } from '@/utils.js';
@@ -66,7 +68,7 @@ var hardware_info = {}
 var nowFocusNode = null
 var nowFocusNodePrevColor = null
 var module_graphs = null
-var selected_module=null
+var selected_module = null
 
 var graph = null;
 var graph_data;
@@ -109,7 +111,7 @@ function graphUpdate() {
     axios.post(url, { model_id: model_id.value, hardware: hardware.value, frontend_params_info: frontend_params_info.value }).then(function (response) {
         console.log(response);
         info_window_str.value = ""
-        module_graphs=response.data.module_graphs //module_graphs is object
+        module_graphs = response.data.module_graphs //module_graphs is object
         let selected_module = null;
         for (let key in module_graphs) {
             if (key.includes("transformer")) {
@@ -118,7 +120,7 @@ function graphUpdate() {
             }
         }
         graph_data = module_graphs[selected_module]
-        
+
         for (let i = 0; i < graph_data.nodes.length; i++) {
             all_node_info.value[graph_data.nodes[i].id] = graph_data.nodes[i].info;
         }
@@ -158,8 +160,8 @@ function graphUpdate() {
         setTimeout(() => {
             graph.fitView();
         }, 10);
-        now_selected_module_node=null
-        now_selected_module_prev_color=null
+        now_selected_module_node = null
+        now_selected_module_prev_color = null
         click_network_node_change_color(selected_module)
 
     })
@@ -364,11 +366,11 @@ onMounted(() => {
     graph.on('canvas:click', (event) => {
         release_select()
     });
-    
+
     var containerElement = document.getElementById('fill_parent_div');
     network_graph_config.width = containerElement.offsetWidth;
     network_graph_config.height = containerElement.offsetHeight;
-    network_graph= new G6.Graph(network_graph_config);
+    network_graph = new G6.Graph(network_graph_config);
     network_graph.on('node:click', (event) => {
         const { item } = event;
         const node = item.getModel();
@@ -395,7 +397,7 @@ function clickNode(node) {
 var now_selected_module_node = null;
 var now_selected_module_prev_color = null;
 
-function click_network_node_change_color(node_id){
+function click_network_node_change_color(node_id) {
     if (now_selected_module_node) {
         // console.log("nowFocusNodePrevColor", nowFocusNodePrevColor)
         now_selected_module_node.update({
@@ -406,7 +408,7 @@ function click_network_node_change_color(node_id){
     }
 
     const node2 = network_graph.findById(node_id)
-    
+
 
     if (node2) {
         // 高亮
@@ -420,16 +422,16 @@ function click_network_node_change_color(node_id){
                 fill: "#dffdff",
             },
         });
-        now_selected_module_node=node2
+        now_selected_module_node = node2
     }
 }
 
-function click_network_node(node){
+function click_network_node(node) {
     console.log(node);
-    if (selected_module==node.id){
+    if (selected_module == node.id) {
         return
     }
-    selected_module=node.id
+    selected_module = node.id
     click_network_node_change_color(node.id)
     release_select()
     graph_data = module_graphs[selected_module]
@@ -510,9 +512,8 @@ function click_network_node(node){
     /* overflow-y: auto; */
 }
 
-.fill_parent_div{
+.fill_parent_div {
     width: 100%;
     height: 100%;
 }
-
 </style>
