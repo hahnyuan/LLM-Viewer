@@ -380,13 +380,12 @@ class ModelAnalyzer:
                 name,
                 OPs=qk_matmul_OPs,
                 load_weight=0,
-                load_act=0,
+                load_act=seqlen * head_size * batchsize * num_key_value_heads * a_byte,
                 store_act=seqlen * seqlen * batchsize * num_attention_heads * a_byte,
                 load_kv_cache=seqlen
                 * head_size
                 * batchsize
                 * num_key_value_heads
-                * 2
                 * kv_byte,
                 store_kv_cache=0,
             )
