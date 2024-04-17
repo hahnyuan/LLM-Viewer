@@ -127,7 +127,7 @@ class Node():
         self.profile_info = {
             "OPs":0,
             "input_shape": [],
-            "is_shared_weight": False,
+            "is_shared_weight": False,  # weight or bias is used by other node
             "is_shared_input": False,
             "n_load_weight": 0,
             "n_load_act": 0,

@@ -2,6 +2,7 @@ import onnx
 from collections import defaultdict
 from prettytable import PrettyTable
 
+from .tensor import volume
 from .base_graph import BaseGraph, OnnxParseConfig
 from .utils import shapes2str
 
@@ -24,8 +25,10 @@ class Graph(BaseGraph):
             self.logger.warning('Please perform a valid shape_infer() before profile().')
             return
 
-        params_flag_map = defaultdict(int)  # judge shared_weight
-        inputs_flag_map = defaultdict(int)  # judge shared_input
+        # judge shared_weight. key:tensor_name, value:num of node used this tensor
+        params_flag_map = defaultdict(int)
+        # judge shared_input. key:tensor_name, value:num of node used this tensor
+        inputs_flag_map = defaultdict(int)
         for key in self.nodemap.keys():
             node = self.nodemap[key]
             for input_name in node.input:
@@ -51,13 +54,11 @@ class Graph(BaseGraph):
             self.graph_profile_info["n_load_act"] += node.profile_info["n_load_act"]
             self.graph_profile_info["n_load_weight"] += node.profile_info["n_load_weight"]
             self.graph_profile_info["n_store_act"] += node.profile_info["n_store_act"]
-        for name,node in self.nodemap.items():
-            if node.op_type in exclude_ops:
-                continue
-            if name in params_flag_map and params_flag_map[name]>=2:
-                self.graph_profile_info["n_load_weight"] -= node.profile_info['n_load_weight'] * (params_flag_map[name] - 1)
-            if name in inputs_flag_map and inputs_flag_map[name]>=2:
-                self.graph_profile_info["n_load_act"] -= node.profile_info['n_load_act'] * (inputs_flag_map[name] - 1)
+        # rm size of the shared weights/activations
+        for name in params_flag_map:
+            self.graph_profile_info["n_load_weight"] -= volume(self.tensormap[name].shape) * (params_flag_map[name] - 1)
+        for name in inputs_flag_map:
+            self.graph_profile_info["n_load_act"] -= volume(self.tensormap[name].shape) * (inputs_flag_map[name] - 1)
 
         self.valid_profile = True
 

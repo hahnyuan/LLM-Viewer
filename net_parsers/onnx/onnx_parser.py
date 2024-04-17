@@ -17,6 +17,7 @@ class OnnxParser(BaseParser):
         self.cfg = OnnxParseConfig(self.model_config)
 
         self.model_path = args.get("model_path", "")
+        print(f'model_path: {self.model_path}')
         assert os.path.exists(self.model_path), "model path not exist"
         self.mproto = onnx.load_model(self.model_path)
         
