@@ -63,7 +63,7 @@ class Graph(BaseGraph):
         self.valid_profile = True
 
     def print_profile_info(self, save_path: str = None, exclude_ops=EXCLUDE_OPS):
-        from utils import str_number_1024
+        from utils import str_number
 
         if not self.valid_profile:
             self.logger.warning('Please perform a valid profile() before print_profile_info().')
@@ -80,23 +80,23 @@ class Graph(BaseGraph):
             if exclude_ops is not None and node.op_type in exclude_ops:
                 continue
             row = [key, self.nodemap[key].op_type]
-            row.append(str_number_1024(int(node.profile_info['OPs'])))
+            row.append(str_number(int(node.profile_info['OPs'])))
             row.append('{:.2%}'.format(node.profile_info['OPs'] / ops))
-            row.append(str_number_1024(int(node.profile_info['n_load_weight'])))
+            row.append(str_number(int(node.profile_info['n_load_weight'])))
             row.append('{:.2%}'.format(node.profile_info['n_load_weight'] / params))
             row.append(shapes2str(node.profile_info['input_shape']))
             row.append(shapes2str(node.profile_info['output_shape']))
             table_rows.append(row)
         row = ['Total', '_']
-        row.append(str_number_1024(int(ops)))
+        row.append(str_number(int(ops)))
         row.append('100%')
-        row.append(str_number_1024(int(params)))
+        row.append(str_number(int(params)))
         row.append('100%')
         row.append('_')
         row.append('_')
 
         table_rows.append(row)
-        headers = ['Name', 'Type', "OPs", "OPs/%", "Params", "Params/%", "InputShapes", "OutShapes"]
+        headers = ['Name', 'Type', "OPs", "OPs/%", "Params_num", "Params_num/%", "InputShapes", "OutShapes"]
 
         table = PrettyTable()
         table.align = "l"
