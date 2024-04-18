@@ -443,7 +443,17 @@ class BaseGraph():
             if key in self.tensormap.keys():
                 self.tensormap[key].update_tensor(inputs[key])
 
+    def print_dynamic_inputs(self):
+        for name in self.input:
+            shape = self.tensormap[name].shape
+            for val in shape:
+                if isinstance(val, str):
+                    self.logger.warning(f"dynamic input: name: {name}, shape: {shape}")
+                elif val < 0:
+                    self.logger.warning(f"dynamic input: name: {name}, shape: {shape}")
+
     def check_inputs(self):
+        self.print_dynamic_inputs()
         for name in self.input:
             shape = self.tensormap[name].shape
             for val in shape:
@@ -460,7 +470,7 @@ class BaseGraph():
         in_valid, tname = self.check_inputs()
         if not in_valid:
             raise ValueError(
-                f"Please set shape of the dynamic input. The input tensor {tname}'s shape {self.tensormap[tname].shape2str()} is not valid")
+                f"Please set shape of the dynamic input. The input tensor: {tname}, shape {self.tensormap[tname].shape2str()} is not valid")
         self.shapeinfer_optime_map = {}
         from .utils import timer
         tm = timer()

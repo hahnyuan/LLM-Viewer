@@ -105,7 +105,9 @@ class OnnxAnalyzer(BaseAnalyzer):
         """
         input_shape_dict = {}
         if input_shape_info != "":
-            for info in input_shape_info.split(";"):
+            for info in input_shape_info.replace('\n', '').split(";"):
+                if info == '':
+                    continue
                 assert len(info.split(":")) == 2, f"input_shape_info format error: {input_shape_info}"
                 name, shape_info = info.split(":")
                 shape = [int(i) for i in shape_info.split(",")]

@@ -150,7 +150,7 @@ class Node():
         self.value_infer(intensors, outtensors)
 
     def value_infer(self, intensors: List[Tensor], outtensors: List[Tensor]):
-        raise NotImplementedError(f'this Node {self.op_type}-{self.name} has no value_infer')
+        raise NotImplementedError(f'this Node type: {self.op_type}, name: {self.name} has no value_infer')
 
     def get_macs(self, intensors: List[Tensor], outtensors: List[Tensor]):
         return 0        
