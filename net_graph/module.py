@@ -99,6 +99,7 @@ class Module:
                     raise ValueError(f"Input shape {input_name} not found")
 
             op_info=node.analyze_node(node_input_shapes,extra_args)
+            # print(self.name, node, op_info)
             shape_dict[node.name]=op_info["output_shape"]
             rsts[node.name]=(node,op_info)
 

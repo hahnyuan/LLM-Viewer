@@ -1,7 +1,9 @@
 from net_parsers.manual.Llama import LlamaParser
 from net_parsers.manual.chatglm3 import Chatglm3Parser
+from net_parsers.manual.stable_diffusion import StableDiffusionParser
 from net_parsers.onnx.onnx_parser import OnnxParser
 from analyzers.llm_analyzer import LLMAnalyzer
+from analyzers.stable_diffusion_analyzer import StableDiffusionAnalyzer
 from analyzers.onnx_analyzer import OnnxAnalyzer
 from hardwares.hardware_params import hardware_params
 
@@ -20,6 +22,7 @@ avaliable_model_ids_sources = {
     # "facebook/opt-66b": {"source": "huggingface"},
     # "DiT-XL/2": {"source": "DiT"},
     # "DiT-XL/4": {"source": "DiT"},
+    "stable_diffusion": (StableDiffusionParser, StableDiffusionAnalyzer),
     "OnnxFile": (OnnxParser, OnnxAnalyzer)
 }
 avaliable_model_ids = [_ for _ in avaliable_model_ids_sources.keys()]

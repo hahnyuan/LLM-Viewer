@@ -118,11 +118,23 @@ function graphUpdate() {
         let selected_module = null;
         for (let key in module_graphs) {
             // 设置默认展示的是哪个module
-            if (key.includes("transformer") || key == "network") {
+            if ((key.includes("transformer") || key == "network")) {
                 selected_module = key;
                 break;
             }
         }
+        // 设置默认展示的是哪个module，默认展示第2个module
+        if (selected_module == null) {
+            let count = 0
+            for (let key in module_graphs) {
+                count += 1
+                if (count == 2) {
+                    selected_module = key;
+                    break;
+                }
+            }
+        }
+        console.log(selected_module)
         graph_data = module_graphs[selected_module]
         for (let i = 0; i < graph_data.nodes.length; i++) {
             all_node_info.value[graph_data.nodes[i].id] = graph_data.nodes[i].info;

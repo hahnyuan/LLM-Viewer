@@ -2,8 +2,39 @@ from typing import Dict
 from net_graph.module import Node
 import numpy as np
 import math
+from net_parsers.onnx.node import _conv_output_shape, RESIZE_LINEAR_MACS, RESIZE_CUBIC_MACS
+
 
 # NOTICE: a MAC(multiply-accumulate) should be counted as 2 OPs
+
+# 
+# GLM
+# QWen
+# DIT
+
+class Conv2d(Node):
+    """
+    attr:
+    - out_features: int
+    """
+    def analyze_node(self,input_shapes, extra_args):
+        input_shape=input_shapes[0]
+
+        output_h = _conv_output_shape(input_shape[2], 2*self.padding[0], self.ksize[0], self.stride[0],
+                                self.dilations[0])
+        output_w = _conv_output_shape(input_shape[3], 2*self.padding[1], self.ksize[1], self.stride[1],
+                                self.dilations[1])
+        output_shape = [input_shape[0], self.out_channels, output_h, output_w]
+
+        rst={
+            "OPs": np.prod(output_shape)*self.ksize[0]*self.ksize[1]*input_shape[1]*2//self.groups,
+            "n_weight": self.ksize[0]*self.ksize[1]*input_shape[1]*self.out_channels,
+            "n_load_weight": self.ksize[0]*self.ksize[1]*input_shape[1]*self.out_channels,
+            "n_load_act": np.prod(input_shape),
+            "n_store_act": np.prod(output_shape),
+            "output_shape": output_shape
+        }
+        return rst
 
 class Linear(Node):
     """
@@ -105,7 +136,8 @@ class MatmulWithLoadKVCache(Node):
 class Add(Node):
     def analyze_node(self,input_shapes, extra_args):
         a_shape,b_shape=input_shapes
-        assert a_shape==b_shape
+        assert len(a_shape)==len(b_shape)
+        assert a_shape==b_shape or [a%b for a,b in zip(a_shape,b_shape)]==[0]*len(a_shape)
         output_shape=[max(a,b) for a,b in zip(a_shape,b_shape)]
         rst={
             "OPs": max(np.prod(a_shape),np.prod(b_shape)),
@@ -115,7 +147,30 @@ class Add(Node):
             "output_shape": output_shape
         }
         return rst
-    
+
+class Concat(Node):
+    def analyze_node(self, input_shapes, extra_args):
+        a_shape,b_shape=input_shapes
+        cat_dim = self.attrs['dim']
+        assert len(a_shape)==len(b_shape)
+        assert [a_shape[i]==b_shape[i] for i in range(len(a_shape)) if i!=cat_dim]==[1]*(len(a_shape)-1)
+
+        output_shape = []
+        for i in range(len(a_shape)):
+            if i==cat_dim:
+                output_shape.append(a_shape[i]+b_shape[i])
+            else:
+                output_shape.append(a_shape[i])
+
+        rst={
+            "OPs": 0,
+            "n_load_weight": 0,
+            "n_load_act": np.prod(a_shape)+np.prod(b_shape),
+            "n_store_act": np.prod(output_shape),
+            "output_shape": output_shape
+        }
+        return rst
+
 class Softmax(Node):
     def analyze_node(self,input_shapes, extra_args):
         input_shape=input_shapes[0]
@@ -130,6 +185,10 @@ class Softmax(Node):
         return rst
 
 class Norm(Node):
+    """RMS Norm
+    x = x / tf.sqrt(x.pow(2).mean + eps)  # ops: 6
+    x = x * gamma  # ops: 1
+    """
     def analyze_node(self,input_shapes, extra_args):
         input_shape=input_shapes[0]
         output_shape=input_shape
@@ -140,7 +199,96 @@ class Norm(Node):
             "output_shape": output_shape
         }
         return rst
-    
+
+class GroupNorm(Node):
+    """
+    mean = x.mean  # ops: 2
+    var = (x-mean).pow(2).mean  # ops: 4
+    x = (x - mean) / tf.sqrt(var + eps)  # ops: 4
+    x = x * gamma + beta  # ops: 2
+    """
+    def analyze_node(self,input_shapes, extra_args):
+        input_shape=input_shapes[0]
+        output_shape=input_shape
+        rst={
+            "OPs": np.prod(input_shape)*12,
+            "n_load_act": np.prod(input_shape),
+            "n_store_act": np.prod(input_shape),
+            "output_shape": output_shape
+        }
+        return rst
+
+class LayerNorm(Node):
+    """
+    mean = x.mean  # ops: 2
+    var = (x-mean).pow(2).mean  # ops: 4
+    x = (x - mean) / tf.sqrt(var + eps)  # ops: 4
+    x = x * gamma + beta  # ops: 2
+    """
+    def analyze_node(self,input_shapes, extra_args):
+        input_shape=input_shapes[0]
+        output_shape=input_shape
+        rst={
+            "OPs": np.prod(input_shape)*12,
+            "n_load_act": np.prod(input_shape),
+            "n_store_act": np.prod(input_shape),
+            "output_shape": output_shape
+        }
+        return rst
+
+class SiLU(Node):
+    """
+    x = x * sigmoid(x), sigmoid=1/(1+e^-x)  # ops: 4
+    """
+    def analyze_node(self,input_shapes, extra_args):
+        input_shape=input_shapes[0]
+        output_shape=input_shape
+        rst={
+            "OPs": np.prod(input_shape)*4,
+            "n_load_act": np.prod(input_shape),
+            "n_store_act": np.prod(input_shape),
+            "output_shape": output_shape
+        }
+        return rst
+
+class GELU(Node):
+    """
+    cdf = 0.5 * (1.0 + tf.erf(input_tensor / tf.sqrt(2.0)))  # ops: 5
+    x = x*cdf  # ops: 1
+    """
+    def analyze_node(self,input_shapes, extra_args):
+        input_shape=input_shapes[0]
+        output_shape=input_shape
+        rst={
+            "OPs": np.prod(input_shape)*6,
+            "n_load_act": np.prod(input_shape),
+            "n_store_act": np.prod(input_shape),
+            "output_shape": output_shape
+        }
+        return rst
+
+class GEGLU(Node):
+    """
+    from stable diffusion:
+        x = nn.Linear(x)
+        x, gate = chunk(chunk_num, dim=chunk_dim)
+        x * GELU(gate)
+    ops: linear + GELU + mul
+    """
+    def analyze_node(self,input_shapes, extra_args):
+        input_shape=input_shapes[0]
+        # print(self.attrs['out_features'])
+
+        output_shape=input_shape[:-1]+[self.attrs['out_features']//self.attrs['chunk_num']]
+        rst={
+            "OPs": np.prod(input_shape)*self.attrs['out_features']*2 + np.prod(input_shape)*6 + np.prod(input_shape),
+            "n_load_weight": input_shape[-1]*self.attrs['out_features'],
+            "n_load_act": np.prod(input_shape),
+            "n_store_act": np.prod(output_shape)*self.attrs['chunk_num'],
+            "output_shape": output_shape
+        }
+        return rst
+
 class Activation(Node):
     def analyze_node(self,input_shapes, extra_args):
         input_shape=input_shapes[0]
@@ -154,7 +302,26 @@ class Activation(Node):
         }
         return rst
     
-    
+class Upsample(Node):
+    def analyze_node(self,input_shapes, extra_args):
+        op_mac = 0
+        if self.attrs['mode']=='nearest':
+            op_mac = 0
+        elif self.attrs['mode']=='bilinear':
+            op_mac = RESIZE_LINEAR_MACS
+        elif self.attrs['mode']=='cubic':
+            op_mac = RESIZE_CUBIC_MACS
+        
+        input_shape=input_shapes[0]
+        output_shape=input_shape[:2]+[input_shape[2]*self.attrs['ratio'][0], input_shape[3]*self.attrs['ratio'][1]]
+        rst={
+            "OPs": np.prod(output_shape)*op_mac,
+            "n_load_act": np.prod(input_shape),
+            "n_store_act": np.prod(output_shape),
+            "output_shape": output_shape
+        }
+        return rst
+
 class ReshapeTranspose(Node):
     def analyze_node(self,input_shapes, extra_args):
         input_shape=input_shapes[0]
@@ -231,4 +398,4 @@ class FlashAttention(Node):
             "n_load_kv_cache":n_blocks_r*(batch_size*n_heads*head_size*kv_length*2),
             "output_shape": output_shape
         }
-        return rst
+        return rst    
