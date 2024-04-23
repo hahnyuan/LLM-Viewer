@@ -45,6 +45,8 @@ def create_node(n: onnx.NodeProto):
     return Node(n)
 
 def _conv_output_shape(xin, pad, ksize, stride, dilation):
+    # k_ = ksize+(ksize-1)*(dilation-1)
+    # return int((xin + pad - k_) / stride + 1)
     return int((xin + pad - dilation * (ksize - 1) - 1) / stride + 1)
 
 
@@ -1375,6 +1377,12 @@ class ErfNode(FusedBase):
 @NODE_REGISTRY.register()
 class BatchNormalizationNode(FusedBase):
     def __init__(self, n):
+        """
+        mean = x.mean  # ops: 2
+        var = (x-mean).pow(2).mean  # ops: 4
+        x = (x - mean) / tf.sqrt(var + eps)  # ops: 4
+        x = x * gamma + beta  # ops: 2
+        """
         super().__init__(n)
         self.add_default_value('epsilon', 1e-05)
         self.add_default_value('momentum', 0.9)
@@ -1398,10 +1406,29 @@ class BatchNormalizationNode(FusedBase):
 
     # Fusion of batchnorm is determined by inference engine, here just gives the MACs.
     def get_macs(self, intensors: List[Tensor], outtensors: List[Tensor]):
-        base = volume(outtensors[0].get_shape())
-        base *= ADD_MACS + SQRT_MACS + DIV_MACS + ADD_MACS + MUL_MACS
-        return base
+        return volume(intensors[0].get_shape()) * self.op_mac
 
+@NODE_REGISTRY.register()
+class LayerNormalizationNode(Node):
+    def __init__(self, node_proto):
+        """
+        mean = x.mean  # ops: 2
+        var = (x-mean).pow(2).mean  # ops: 4
+        x = (x - mean) / tf.sqrt(var + eps)  # ops: 4
+        x = x * gamma + beta  # ops: 2
+        """
+        super().__init__(node_proto)
+        self.add_default_value('axis', -1)
+        self.add_default_value('epsilon ', 1e-05)
+        self.add_default_value('stash_type', 1)
+        self.op_mac = 12
+
+    def shape_infer(self, intensors: List[Tensor], outtensors: List[Tensor]):
+        outtensors[0].update_shape(intensors[0].get_shape())
+        outtensors[0].update_dtype(intensors[0].dtype)
+
+    def get_macs(self, intensors: List[Tensor], outtensors: List[Tensor]):
+        return volume(intensors[0].get_shape()) * self.op_mac
 
 @NODE_REGISTRY.register()
 class FlattenNode(Node):
@@ -2154,27 +2181,6 @@ class DequantizeLinearNode(PWBase):
     def shape_infer(self, intensors: List[Tensor], outtensors: List[Tensor]):
         outtensors[0].update_shape(intensors[0].get_shape())
         outtensors[0].update_dtype(intensors[1].dtype)
-
-
-@NODE_REGISTRY.register()
-class LayerNormalizationNode(Node):
-    def __init__(self, node_proto):
-        super().__init__(node_proto)
-        self.add_default_value('axis', -1)
-        self.add_default_value('epsilon ', 1e-05)
-        self.add_default_value('stash_type', 1)
-
-    def shape_infer(self, intensors: List[Tensor], outtensors: List[Tensor]):
-        outtensors[0].update_shape(intensors[0].get_shape())
-        outtensors[0].update_dtype(intensors[0].dtype)
-
-    def get_macs(self, intensors: List[Tensor], outtensors: List[Tensor]):
-        tshape = intensors[0].get_shape()
-        axis = _axes_neg2pos(len(tshape), [self.axis])[0]
-        vol = volume(tshape)
-        tshape[axis] = 1
-        vol2 = volume(tshape)
-        return vol * (MUL_MACS * 3 + +ADD_MACS * 4) + vol2 * (ADD_MACS + SQRT_MACS + DIV_MACS)
 
 
 @NODE_REGISTRY.register()
