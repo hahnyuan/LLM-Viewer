@@ -4,20 +4,20 @@ def get_num_attention_heads(model_params):
 
 
 def get_hidden_size(model_params):
-    return getattr(model_params, "hidden_size")
-
-
-def get_num_key_value_heads(model_params):
-    return getattr(model_params, "num_key_value_heads")
+    return getattr(model_params, "n_embd")
 
 def get_norm_layers(model_params):
-    return ["attn_norm", "mlp_norm"]
+    return ["attn_norm"]
+
+# no group query attention
+def get_num_key_value_heads(model_params):
+    return getattr(model_params, "num_attention_heads")
 
 def get_num_hidden_layers(model_params):
     return getattr(model_params, "num_hidden_layers")
 
 def get_intermediate_size(model_params):
-    return getattr(model_params, "intermediate_size")
+    return 16384
 
 def get_vocab_size(model_params):
     return getattr(model_params, "vocab_size")
@@ -47,7 +47,7 @@ def get_linear_layers(model_params):
         "k_proj":[hidden_size, hidden_size*key_value_heads/attention_heads],
         "v_proj":[hidden_size, hidden_size*key_value_heads/attention_heads],
         "out_proj":[hidden_size, hidden_size],
-        "gate_proj":[hidden_size, intermediate_size],
+        #"gate_proj":[hidden_size, intermediate_size],
         "up_proj":[hidden_size,intermediate_size],
         "down_proj":[intermediate_size, hidden_size],
     }
@@ -64,10 +64,8 @@ transformer_layer_graph={
     "sv_matmul":["softmax","v_proj"],
     "out_proj":["sv_matmul"],
     "attn_add":["input","out_proj"],
-    "mlp_norm":["attn_add"],
-    "gate_proj":["mlp_norm"],
-    "up_proj":["mlp_norm"],
-    "mlp_act":["up_proj","gate_proj"],
+    "up_proj":["input"],
+    "mlp_act":["up_proj"],
     "down_proj":["mlp_act"],
     "mlp_add":["attn_add","down_proj"],
     "output":["mlp_add"]

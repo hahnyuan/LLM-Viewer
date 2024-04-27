@@ -10,6 +10,8 @@ def get_hidden_size(model_params):
 def get_num_key_value_heads(model_params):
     return getattr(model_params, "num_heads")
 
+def get_norm_layers(model_params):
+    return ["attn_norm", "mlp_norm"]
 
 def get_num_hidden_layers(model_params):
     return getattr(model_params, "depth")

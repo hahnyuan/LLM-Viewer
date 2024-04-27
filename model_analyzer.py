@@ -304,7 +304,7 @@ class ModelAnalyzer:
                 store_kv_cache=0,
             )
 
-        for name in ["attn_norm", "mlp_norm"]:
+        for name in config.get_norm_layers(model_params):
             # sum sub pow sum div mul add
             self._analyze_to_results(
                 "decode",
@@ -415,7 +415,7 @@ class ModelAnalyzer:
                 load_kv_cache=0,
                 store_kv_cache=0,
             )
-        for name in ["attn_norm", "mlp_norm"]:
+        for name in config.get_norm_layers(model_params):
             self._analyze_to_results(
                 "prefill",
                 name,

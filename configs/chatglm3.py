@@ -19,6 +19,9 @@ def get_intermediate_size(model_params):
 def get_vocab_size(model_params):
     return getattr(model_params, "padded_vocab_size")
 
+def get_norm_layers(model_params):
+    return ["attn_norm", "mlp_norm"]
+
 def post_process(model_params,args):
     hiddensize=get_hidden_size(model_params)
     vocab_size=get_vocab_size(model_params)
