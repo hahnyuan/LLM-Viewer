@@ -12,7 +12,7 @@ hardware_params = {
     "nvidia_A100_40G": {"bandwidth": 1555e9, "FP16": 312e12, "INT8": 624e12, "onchip_buffer": 27648e3},
     "nvidia_A100_80G": {"bandwidth": 2039e9, "FP16": 312e12, "INT8": 624e12, "onchip_buffer": 27648e3},
     "nvidia_A800_80G_SXM":{"bandwidth":2039e9, "FP16":312e12, "INT8":624e12,"onchip_buffer":27648e3},
-    "nvidia_A40": {"bandwidth": 696e9, "FP16": 149.7e12/2, "INT8": 299.3e12/2, "onchip_buffer": 21504e3},
+    "nvidia_A40": {"bandwidth": 696e9, "FP16": 149.7e12, "INT8": 299.3e12, "onchip_buffer": 21504e3},
     # https://resources.nvidia.com/en-us-tensor-core/gtc22-whitepaper-hopper
     "nvidia_H100": {"bandwidth": 3072e9, "FP16": 1979e12/2, "INT8": 3958e12/2, "onchip_buffer": 33792e3}, # use SXM data
     "nvidia_H100_SXM": {"bandwidth": 3072e9, "FP16": 1979e12/2, "INT8": 3958e12/2, "onchip_buffer": 33792e3},
