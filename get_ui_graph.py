@@ -43,7 +43,7 @@ def analyze_get_ui_graph(model_id, hardware, frontend_params_info):
     if "compute_dtype" in kwargs:
         hardware_info["max_OPS"]=hardware_info[kwargs["compute_dtype"]]
     else:
-        hardware_info["max_OPS"]=hardware_info["FP16"]
+        hardware_info["max_OPS"]=hardware_info["FP16"] if "FP16" in hardware_info else hardware_info["INT8"]
 
     network_graph, module_graphs=analyzer.get_ui_graph(result)
     network_results = numpy_value_to_python(result["network"])

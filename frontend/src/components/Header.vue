@@ -83,7 +83,7 @@ onMounted(() => {
     console.log("Header mounted")
     var is_updated = update_avaliable_model_hardwares(avaliable_hardwares, avaliable_model_ids, ip_port)
     if (is_updated) {
-        update_frontend_params_info(frontend_params_info, model_id, ip_port)
+        update_frontend_params_info(frontend_params_info, model_id, ip_port, hardware)
     }
 })
 
@@ -92,10 +92,7 @@ watch(select_model_id, (n) => {
     console.log("select_model_id", n)
     model_id.value = n
     frontend_params_info.value = {}
-    var is_updated = update_frontend_params_info(frontend_params_info, model_id, ip_port)
-    if (is_updated) {
-        global_update_trigger.value += 1
-    }
+    update_frontend_params_info(frontend_params_info, model_id, ip_port, hardware)
 })
 
 var select_hardware = ref('nvidia_A6000');
@@ -109,7 +106,7 @@ watch(ip_port, (n) => {
     console.log("ip_port", n)
     var is_updated = update_avaliable_model_hardwares(avaliable_hardwares, avaliable_model_ids, ip_port)
     if (is_updated) {
-        update_frontend_params_info(frontend_params_info, model_id, ip_port)
+        update_frontend_params_info(frontend_params_info, model_id, ip_port, hardware)
     }
 })
 

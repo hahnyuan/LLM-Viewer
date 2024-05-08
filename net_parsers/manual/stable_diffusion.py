@@ -21,7 +21,8 @@ class StableDiffusionParser(BaseParser):
         self.hidden_channels_ffn = 1280
         self.num_heads = 8  # attention
 
-        self.batch_size = 2*self.args['batchsize'] if self.args['conditional_guidance'] else self.args['batchsize']
+        self.batch_size = 2*self.args.get('batchsize', 1) if self.args.get("conditional_guidance", True) else self.args.get('batchsize', 1)
+        self.latent_size = self.args.get('latent_size', 64)
     
     def build_res_block(self, input_name, output_name, hidden_channels, with_skip_connection=False):
         out_name_before_skip = "out_layers_out" if with_skip_connection else output_name
@@ -97,7 +98,7 @@ class StableDiffusionParser(BaseParser):
             # add
             Add("ffn_out_add", ["ffn_out", "cross_attn_out_add"]),
             # proj_out
-            ReshapeTranspose("ffn_out_add_reshape", ["ffn_out_add"], {"shape":["input_shape[0]", hidden_channels, self.args['latent_size']*size_ratio, self.args['latent_size']*size_ratio]}),
+            ReshapeTranspose("ffn_out_add_reshape", ["ffn_out_add"], {"shape":["input_shape[0]", hidden_channels, self.latent_size*size_ratio, self.latent_size*size_ratio]}),
             Conv2d("proj_out", ["ffn_out_add_reshape"], {"out_channels": hidden_channels, "ksize": (1,1), "stride": (1,1), "dilations": (1,1), "padding":(0,0), "groups":1}),
             # add
             Add(output_name, ["proj_out", input_name]),

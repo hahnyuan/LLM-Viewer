@@ -53,6 +53,9 @@ const network_results = inject('network_results');
 
 watch(frontend_params_info, () => {
     console.log("frontend_params_info change")
+    // for (let param_info of frontend_params_info.value) {
+    //     console.log(param_info.name, param_info.default);
+    // }
     global_update_trigger.value += 1
 }, { deep: true });
 

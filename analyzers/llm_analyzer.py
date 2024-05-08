@@ -81,7 +81,7 @@ class LLMAnalyzer(BaseAnalyzer):
             "name": "compute_dtype",
             "type": "select",
             "choices": ["FP16", "INT8"],
-            "default": "FP16",
+             "default": "INT8",
             "description": "Compute data type"
         }
     ]
@@ -97,7 +97,7 @@ class LLMAnalyzer(BaseAnalyzer):
         kv_bit=None,
         use_flashattention=False,
         n_parallel_decode=1,
-        compute_dtype="FP16"
+        compute_dtype="INT8"
     ):
         """
         return is a dict with the following format:

@@ -38,7 +38,7 @@ class OnnxAnalyzer(BaseAnalyzer):
             "name": "compute_dtype",
             "type": "select",
             "choices": ["FP16", "INT8"],
-            "default": "FP16",
+             "default": "INT8",
             "description": "Compute data type"
         }
     ]
@@ -49,7 +49,7 @@ class OnnxAnalyzer(BaseAnalyzer):
         input_shape_info="",
         w_bit=16,
         a_bit=16,
-        compute_dtype="FP16"
+        compute_dtype="INT8"
     ):
         """profile model
 

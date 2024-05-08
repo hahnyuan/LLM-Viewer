@@ -15,18 +15,22 @@ async function update_avaliable_model_hardwares(avaliable_hardwares, avaliable_m
     }
 }
 
-async function update_frontend_params_info(frontend_params_info, model_id, ip_port) {
+async function update_frontend_params_info(frontend_params_info, model_id, ip_port, hardware) {
+    // get default fronted parmas info
     const url = 'http://' + ip_port.value + '/get_frontend_params_info'
     
     try {
         const response = await axios.post(url, {
             model_id: model_id.value
         });
-        console.log("update_frontend_params_info",response);
+        console.log("update default frontend_params_info",response);
         
         frontend_params_info.value = response.data.frontend_params_info
         for (let param_info of frontend_params_info.value) {
-            console.log(param_info);
+            // console.log(param_info.name, param_info.default);
+            // if(param_info.name=="compute_dtype" && hardware.value.includes("HM-")){
+            //   param_info.default = "INT8";
+            // }
             param_info.value = param_info.default
         }
         return true
