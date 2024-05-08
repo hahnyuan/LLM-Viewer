@@ -25,7 +25,7 @@
     </div>
     <div>
         <span> | </span>
-        <span class="hover-bold" @click="is_show_help = ! is_show_help">Help</span>
+        <span class="hover-bold" @click="is_show_help = !is_show_help">Help</span>
     </div>
     <div>
         <span> | </span>
@@ -33,15 +33,18 @@
     </div>
     <div v-if="is_show_help" class="float-info-window">
         <!-- item -->
-        <p>LLM-Viewer is a open-sourced tool to visualize the LLM model and analyze the deployment on hardware devices.</p>
+        <p>LLM-Viewer is a open-sourced tool to visualize the LLM model and analyze the deployment on hardware devices.
+        </p>
         <p>
-            At the center of the page, you can see the graph a module in the network. Click the node to see the detail of the node.
+            At the center of the page, you can see the graph a module in the network. Click the node to see the detail
+            of the node.
         </p>
         <p>↑ At the top of the page, you can set the LLM model, hardware devices, and server.
             If you deploy the LLM-Viewer localhost, you can select the localhost server.
         </p>
         <p>
-            ← At the left of the page, you can see the configuration pannel. You can set the inference config and optimization config.
+            ← At the left of the page, you can see the configuration pannel. You can set the inference config and
+            optimization config.
         </p>
         <p>
             ↙ The Network-wise Analysis result is demonstrated in the left pannel.
@@ -50,8 +53,10 @@
             → Select module to change differnt module in the network in the right pannel.
         </p>
         <p>
-            We invite you to read our paper <a class="hover-bold" href="https://arxiv.org/pdf/2402.16363.pdf" target="_blank">LLM Inference Unveiled: Survey and Roofline Model Insights</a>.
-            In this paper, we provide a comprehensive analysis of the latest advancements in efficient LLM inference using LLM-Viewer. 
+            We invite you to read our paper <a class="hover-bold" href="https://arxiv.org/pdf/2402.16363.pdf"
+                target="_blank">LLM Inference Unveiled: Survey and Roofline Model Insights</a>.
+            In this paper, we provide a comprehensive analysis of the latest advancements in efficient LLM inference
+            using LLM-Viewer.
         </p>
     </div>
 </template>
@@ -76,7 +81,7 @@ const is_show_help = ref(false)
 
 onMounted(() => {
     console.log("Header mounted")
-    var is_updated=update_avaliable_model_hardwares(avaliable_hardwares, avaliable_model_ids, ip_port)
+    var is_updated = update_avaliable_model_hardwares(avaliable_hardwares, avaliable_model_ids, ip_port)
     if (is_updated) {
         update_frontend_params_info(frontend_params_info, model_id, ip_port)
     }
@@ -86,7 +91,7 @@ var select_model_id = ref('meta-llama/Llama-2-7b-hf');
 watch(select_model_id, (n) => {
     console.log("select_model_id", n)
     model_id.value = n
-    frontend_params_info.value= {}
+    frontend_params_info.value = {}
     var is_updated = update_frontend_params_info(frontend_params_info, model_id, ip_port)
     if (is_updated) {
         global_update_trigger.value += 1
@@ -102,7 +107,7 @@ watch(select_hardware, (n) => {
 
 watch(ip_port, (n) => {
     console.log("ip_port", n)
-    var is_updated=update_avaliable_model_hardwares(avaliable_hardwares, avaliable_model_ids, ip_port)
+    var is_updated = update_avaliable_model_hardwares(avaliable_hardwares, avaliable_model_ids, ip_port)
     if (is_updated) {
         update_frontend_params_info(frontend_params_info, model_id, ip_port)
     }
@@ -146,7 +151,7 @@ watch(ip_port, (n) => {
     text-align: left;
 }
 
-.hover-bold{
+.hover-bold {
     color: inherit;
     /* text-decoration: none; */
 }
