@@ -2,15 +2,10 @@ from typing import Dict
 from net_graph.module import Node
 import numpy as np
 import math
-from net_parsers.onnx.node import _conv_output_shape, RESIZE_LINEAR_MACS, RESIZE_CUBIC_MACS
+from net_parsers.onnx.node import _conv_output_shape, RESIZE_LINEAR_OPs, RESIZE_CUBIC_OPs
 
 
 # NOTICE: a MAC(multiply-accumulate) should be counted as 2 OPs
-
-# 
-# GLM
-# QWen
-# DIT
 
 class Conv2d(Node):
     """
@@ -304,18 +299,18 @@ class Activation(Node):
     
 class Upsample(Node):
     def analyze_node(self,input_shapes, extra_args):
-        op_mac = 0
+        op_ops = 0
         if self.attrs['mode']=='nearest':
-            op_mac = 0
+            op_ops = 0
         elif self.attrs['mode']=='bilinear':
-            op_mac = RESIZE_LINEAR_MACS
+            op_ops = RESIZE_LINEAR_OPs
         elif self.attrs['mode']=='cubic':
-            op_mac = RESIZE_CUBIC_MACS
+            op_ops = RESIZE_CUBIC_OPs
         
         input_shape=input_shapes[0]
         output_shape=input_shape[:2]+[input_shape[2]*self.attrs['ratio'][0], input_shape[3]*self.attrs['ratio'][1]]
         rst={
-            "OPs": np.prod(output_shape)*op_mac,
+            "OPs": np.prod(output_shape)*op_ops,
             "n_load_act": np.prod(input_shape),
             "n_store_act": np.prod(output_shape),
             "output_shape": output_shape
