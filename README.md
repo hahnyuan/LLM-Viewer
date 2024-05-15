@@ -66,7 +66,7 @@ Only the relative relationships can be referenced.
 
 ### Profile Onnx
 ```bash
-python3 analyze_cli.py OnnxFile HM-SM3030-CB \
+python3 analyze_cli.py OnnxFile nvidia_A6000 \
 --model_path data/onnx/resnet50-v2-7.onnx \
 --input_shape_info data:1,3,224,224 \
 --w_bit 8 \
