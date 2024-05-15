@@ -35,14 +35,17 @@ As shown in the Figure, the workflow consists of the following steps:
 To use LLM-Viewer in a web browser, go to the web-site [LLM-Viewer Web](http://llm-viewer.com).
 You can click the node to get the detailed analysis of the layer.
 
+You can click node/module to get node/module profile info.
+
 ## CLI Usage
 
 Clone the LLM-Viewer repository from GitHub: 
 ```git clone https://github.com/hahnyuan/LLM-Viewer.git   ```
 
 Install requirements
-```pip install transformers flask flask_cors easydict numpy onnx onnxsim```
+```pip install transformers flask flask_cors easydict numpy onnx onnxsim prettytable```
 
+### Profile build-in LLM and SD models
 To analyze an LLM using LLM-Viewer in command line interface (cli), run the following command:
 
 ```bash
@@ -51,18 +54,33 @@ python3 analyze_cli.py meta-llama/Llama-2-7b-hf nvidia_A6000 --batchsize 1 --seq
 python3 analyze_cli.py meta-llama/Llama-2-13b-hf nvidia_A6000 --batchsize 16 --seqlen 2048
 python3 analyze_cli.py meta-llama/Llama-2-13b-hf nvidia_A6000 --batchsize 1 --seqlen 8192
 
-# DiT models
-python3 analyze_cli.py DiT-XL/2 nvidia_A6000 --batchsize 1 --seqlen 256 --source DiT
+# stable_diffusion models
+python3 analyze_cli.py stable_diffusion nvidia_A6000 --batchsize 1 --time_steps 20
 ```
+The build-in models can be found in backend_settings.py.Now, support llama, Qwen, stable_diffusion.
+The hardware info can be found in hardwares/hardware_params.py.
 
 NOTE: The time estimated by the roofline model represents the theoretical performance that the hardware can achieve. 
 The purpose of creating this tool is to help readers gain a clearer understanding of the key factors that influence LLM inference. 
 Only the relative relationships can be referenced. 
 
-## Onnx Profile Info
+### Profile Onnx
+```bash
+python3 analyze_cli.py OnnxFile HM-SM3030-CB \
+--model_path data/onnx/resnet50-v2-7.onnx \
+--input_shape_info data:1,3,224,224 \
+--w_bit 8 \
+--a_bit 8 \
+--compute_dtype INT8 \
+--save_csv_path output/onnx_profile_resnet50.csv
+```
 
-![Onnx Profile Info](figs/onnx_profile_info.png)
+NOTE: Onnx profile only support origin onnx OP.If you want to profile customize OP, add your node into net_parsers/onnx/node.py.
 
+onnx profile info without hardware_profile:
+![Onnx Profile Info without hardware_profile](figs/onnx_profile_info.png)
+onnx profile info with hardware_profile:
+![onnx profile info with hardware_profile](figs/onnx_profile_info_hardware.png)
 ## Citation
 
 If you are using LLM-Viewer in your research, please cite our paper:

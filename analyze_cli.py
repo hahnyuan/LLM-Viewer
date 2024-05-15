@@ -7,6 +7,9 @@ import numpy as np
 import os
 import importlib
 import argparse
+import inspect
+from prettytable import PrettyTable
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument("model_id", type=str, help="model id")
@@ -36,24 +39,38 @@ parser.add_argument(
 )
 parser.add_argument("--compute_dtype", type=str, default="FP16", help="compute dtype",choices=["FP16","INT8"])
 parser.add_argument("--save_csv_path", type=str, default="output/results.csv", help="save csv path")
+# for stable_diffusion
+parser.add_argument(
+    "--latent_size", type=int, default=64, help="latent_size for stable_diffusion"
+)
+parser.add_argument(
+    "--time_steps", type=int, default=20, help="time_steps for stable_diffusion"
+)
+# for onnx
+parser.add_argument("--model_path", type=str, default=None, help="onnx model path")
+parser.add_argument("--input_shape_info", type=str, default=None, 
+    help="input info for dynamic input onnx model. example: data:1,3,224,224"
+)
+
 args = parser.parse_args()
 
 
 parser_cls, analyzer_cls = avaliable_model_ids_sources[args.model_id]
-network = parser_cls(args.model_id, {'use_flashattention':args.use_flashattention}).parse()
+network = parser_cls(args.model_id, vars(args)).parse()
 hardware_model=get_roofline_model(args.hardware)
 analyzer=analyzer_cls(network,hardware_model)
 
+
+def get_parameters_in_dict(func, param_args):
+    signature = inspect.signature(func)
+    parameters = signature.parameters
+
+    parms = {param:getattr(param_args, param) for param in parameters if param in param_args}
+    return parms
+print(get_parameters_in_dict(analyzer.analyze, args))
+
 results = analyzer.analyze(
-    seqlen=args.seqlen,
-    batchsize=args.batchsize,
-    stage=args.stage,
-    w_bit=args.w_bit,
-    a_bit=args.a_bit,
-    kv_bit=args.kv_bit,
-    use_flashattention=args.use_flashattention,
-    n_parallel_decode=args.n_parallel_decode,
-    compute_dtype=args.compute_dtype,
+    **get_parameters_in_dict(analyzer.analyze, args)
 )
 
 layer_result=results["layers"]
@@ -86,17 +103,31 @@ network_result:
     "inference_time": ...,
 }
 """
+def print_df_to_table(df):
+    table = PrettyTable()
+    table.field_names = ["Layer"] + list(df.columns)
+
+    for index, row in df.iterrows():
+        table.add_row([index] + list(row))
+    print(table)
 
 # transform to pandas
 all_keys=set()
 for layer_name,layer in layer_result.items():
-    all_keys.update(layer[1].keys())
+    if isinstance(layer, dict):
+        all_keys.update(layer.keys())
+    else:
+        all_keys.update(layer[1].keys())
 all_keys=list(all_keys)
 layer_df=pd.DataFrame(columns=all_keys)
 for layer_name,layer in layer_result.items():
     # set row name as layer_name
-    layer_df=layer_df.append(pd.Series(layer[1],name=layer_name))
+    if isinstance(layer, dict):
+        layer_df=layer_df.append(pd.Series(layer,name=layer_name))
+    else:
+        layer_df=layer_df.append(pd.Series(layer[1],name=layer_name))
 
+print_df_to_table(layer_df)
 
 # layer_df.index.name="name"
 
@@ -104,7 +135,7 @@ network_df=pd.DataFrame(columns=network_result.keys())
 
 network_df=network_df.append(pd.Series(network_result,name="network"))
 
-
+print_df_to_table(network_df)
 
 save_csv_dir=os.path.dirname(args.save_csv_path)
 if not os.path.exists(save_csv_dir):
@@ -119,5 +150,3 @@ layer_df.to_csv(args.save_csv_path, mode='a+', header=True)
 with open(args.save_csv_path,"a+") as f:
     f.write(f"\n")
 network_df.to_csv(args.save_csv_path, mode='a+', header=True)
-
-print(network_df)
