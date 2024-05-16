@@ -48,7 +48,7 @@ parser.add_argument(
 )
 # for onnx
 parser.add_argument("--model_path", type=str, default=None, help="onnx model path")
-parser.add_argument("--input_shape_info", type=str, default=None, 
+parser.add_argument("--input_shape_info", type=str, default="", 
     help="input info for dynamic input onnx model. example: data:1,3,224,224"
 )
 
