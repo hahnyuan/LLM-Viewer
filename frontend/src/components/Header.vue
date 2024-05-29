@@ -31,6 +31,10 @@
         <span> | </span>
         <a href="https://github.com/hahnyuan/LLM-Viewer" target="_blank" class="hover-bold">Github Project</a>
     </div>
+    <div>
+        <span> | </span>
+        <a href="https://arxiv.org/pdf/2402.16363.pdf" target="_blank" class="hover-bold">Paper</a>
+    </div>
     <div v-if="is_show_help" class="float-info-window">
         <!-- item -->
         <p>LLM-Viewer is a open-sourced tool to visualize the LLM model and analyze the deployment on hardware devices.

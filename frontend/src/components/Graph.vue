@@ -36,7 +36,7 @@
     </div>
     <div class="float-network-graph-window">
         <!-- cetering -->
-        <div style="text-align: center;">Select Module</div>
+        <div style="text-align: center;">Full Network (Select to change)</div>
         <div class="fill_parent_div" id="fill_parent_div">
             <div id="networkGraphContainer" @resize="handleResize"></div>
         </div>
@@ -174,7 +174,7 @@ function graphUpdate() {
 
         setTimeout(() => {
             graph.fitView();
-        }, 10);
+        }, 30);
         now_selected_module_node = null
         now_selected_module_prev_color = null
         click_network_node_change_color(selected_module)
