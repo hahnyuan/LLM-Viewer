@@ -12,8 +12,8 @@ avaliable_model_ids_sources = {
     "facebook/opt-6.7b": {"source": "huggingface"},
     "facebook/opt-30b": {"source": "huggingface"},
     "facebook/opt-66b": {"source": "huggingface"},
-    "DiT-XL/2": {"source": "DiT"},
-    "DiT-XL/4": {"source": "DiT"},
+    # "DiT-XL/2": {"source": "DiT"},
+    # "DiT-XL/4": {"source": "DiT"},
 }
 avaliable_model_ids = [_ for _ in avaliable_model_ids_sources.keys()]
 avaliable_hardwares = [_ for _ in hardware_params.keys()]

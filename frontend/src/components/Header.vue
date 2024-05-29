@@ -31,6 +31,10 @@
         <span> | </span>
         <a href="https://github.com/hahnyuan/LLM-Viewer" target="_blank" class="hover-bold">Github Project</a>
     </div>
+    <div>
+        <span> | </span>
+        <a href="https://arxiv.org/pdf/2402.16363.pdf" target="_blank" class="hover-bold">Paper</a>
+    </div>
     <div v-if="is_show_help" class="float-info-window">
         <!-- item -->
         <p>LLM-Viewer is a open-sourced tool to visualize the LLM model and analyze the deployment on hardware devices.</p>
@@ -49,7 +53,14 @@
         <p>
             We invite you to read our paper <a class="hover-bold" href="https://arxiv.org/pdf/2402.16363.pdf" target="_blank">LLM Inference Unveiled: Survey and Roofline Model Insights</a>.
             In this paper, we provide a comprehensive analysis of the latest advancements in efficient LLM inference using LLM-Viewer. 
+            Citation bibtext:
         </p>
+        @article{yuan2024llm,<br/>
+            &nbsp    title={LLM Inference Unveiled: Survey and Roofline Model Insights},<br/>
+            &nbsp    author={Yuan, Zhihang and Shang, Yuzhang and Zhou, Yang and Dong, Zhen and Xue, Chenhao and Wu, Bingzhe and Li, Zhikai and Gu, Qingyi and Lee, Yong Jae and Yan, Yan and others},<br/>
+            &nbsp    journal={arXiv preprint arXiv:2402.16363},<br/>
+            &nbsp    year={2024}<br/>
+        }
     </div>
 </template>
 
@@ -160,7 +171,7 @@ watch(ip_port, (n) => {
     height: auto;
     width: 30%;
     background-color: #f1f1f1ed;
-    /* padding: 5px; */
+    padding: 20px;
     /* background-color: #fff; */
     /* border: 2px solid #4e4e4e; */
     z-index: 999;
