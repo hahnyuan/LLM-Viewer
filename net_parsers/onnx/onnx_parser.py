@@ -1,16 +1,16 @@
 import os
-import onnx
 import numpy as np
 
 from ..base_parser import BaseParser
 from net_graph.network import OnnxNetwork
-from .base_graph import OnnxParseConfig
-from .graph import Graph
 
 
 class OnnxParser(BaseParser):
     def __init__(self, model_id, args: dict):
         super().__init__(model_id, args)
+        import onnx
+        from .base_graph import OnnxParseConfig
+        from .graph import Graph
         
         self.model_config={"constant_folding": args.get('constant_folding',True),
                             "node_rename": args.get('node_rename',False),}

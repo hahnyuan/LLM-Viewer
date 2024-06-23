@@ -1,6 +1,5 @@
 from net_graph.module import Module
 import numpy as np
-from net_parsers.onnx.graph import Graph
 import typing
 
 class BaseNetwork:
@@ -74,7 +73,9 @@ class Network(BaseNetwork):
 
 
 class OnnxNetwork(BaseNetwork):
-    def __init__(self, graph: Graph):
+    def __init__(self, graph):
+        from net_parsers.onnx.graph import Graph
+        assert isinstance(graph, Graph)
         self.graph = graph
 
     def print_graph(self):

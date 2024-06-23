@@ -2,10 +2,12 @@ from typing import Dict
 from net_graph.module import Node
 import numpy as np
 import math
-from net_parsers.onnx.node import _conv_output_shape, RESIZE_LINEAR_OPs, RESIZE_CUBIC_OPs
-
-
 # NOTICE: a MAC(multiply-accumulate) should be counted as 2 OPs
+
+def _conv_output_shape(xin, pad, ksize, stride, dilation):
+    # k_ = ksize+(ksize-1)*(dilation-1)
+    # return int((xin + pad - k_) / stride + 1)
+    return int((xin + pad - dilation * (ksize - 1) - 1) / stride + 1)
 
 class Conv2d(Node):
     """
@@ -303,9 +305,9 @@ class Upsample(Node):
         if self.attrs['mode']=='nearest':
             op_ops = 0
         elif self.attrs['mode']=='bilinear':
-            op_ops = RESIZE_LINEAR_OPs
+            op_ops = 4 * 2  # 4MAC
         elif self.attrs['mode']=='cubic':
-            op_ops = RESIZE_CUBIC_OPs
+            op_ops = 8 * 2  # 8MAC
         
         input_shape=input_shapes[0]
         output_shape=input_shape[:2]+[input_shape[2]*self.attrs['ratio'][0], input_shape[3]*self.attrs['ratio'][1]]
