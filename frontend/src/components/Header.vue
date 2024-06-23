@@ -19,7 +19,7 @@
         <span> | </span>
         <span>Server: </span>
         <select v-model="ip_port">
-            <option value="api.llm-viewer.com:5000">api.llm-viewer.com</option>
+            <option value="api.llm-viewer.com">api.llm-viewer.com</option>
             <option value="127.0.0.1:5000">127.0.0.1</option>
         </select>
     </div>
