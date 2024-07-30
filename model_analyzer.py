@@ -33,23 +33,17 @@ class ModelAnalyzer:
                 if file.endswith(".py") and file.replace(".py", "") in model_id:
                     config_file = "configs/" + file
                 # print(f"auto search config file {config_file} {file} {model_id}")
-        assert (
-            config_file is not None
-        ), "config file is not found, please specify it manually."
+        assert config_file is not None, "config file is not found, please specify it manually."
         print(f"use config file {config_file} for {model_id}")
         if source == "huggingface":
-            self.model_params = AutoConfig.from_pretrained(
-                model_id, trust_remote_code=True
-            )
+            self.model_params = AutoConfig.from_pretrained(model_id, trust_remote_code=True)
         else:
             if not os.path.exists(f"model_params/{source}.py"):
                 raise Exception(f"model_params/{source}.py is not found")
             # from model_params.DiT import model_params
-            module=importlib.import_module(f"model_params.{source}")
+            module = importlib.import_module(f"model_params.{source}")
             self.model_params = module.model_params[model_id]
-        self.config = importlib.import_module(
-            config_file.replace("/", ".").replace(".py", "")
-        )
+        self.config = importlib.import_module(config_file.replace("/", ".").replace(".py", ""))
 
         # temporary variables
         self.results = None
@@ -72,12 +66,8 @@ class ModelAnalyzer:
     ):
 
         bandwidth, max_OPS, onchip_buffer = self.get_hardware_info()
-        memory_access = (
-            load_weight + load_act + store_act + load_kv_cache + store_kv_cache
-        )
-        arithmetic_intensity, performance, bound = roofline_analyze(
-            bandwidth, max_OPS, OPs, memory_access
-        )
+        memory_access = load_weight + load_act + store_act + load_kv_cache + store_kv_cache
+        arithmetic_intensity, performance, bound = roofline_analyze(bandwidth, max_OPS, OPs, memory_access)
         inference_time = OPs / performance
         self.results[stage][name] = {
             "OPs": OPs,
@@ -120,7 +110,9 @@ class ModelAnalyzer:
             with open(file_name, "a+") as f:
                 for layer_name, result in self.results[stage].items():
                     f.write(
-                        f"{layer_name},{str_number(result['OPs'])},{str_number(result['memory_access'])}B,{str_number(result['arithmetic_intensity'])},{str_number(result['performance'])},{result['bound']},{str_number(result['load_weight'])}B,{str_number(result['load_act'])}B,{str_number(result['store_act'])}B,{str_number(result['load_kv_cache'])}B,{str_number(result['store_kv_cache'])}B,{str_number_time(result['inference_time'])}s\n"
+                        f"{layer_name},{str_number(result['OPs'])},{str_number(result['memory_access'])}B,{str_number(result['arithmetic_intensity'])},{str_number(result['performance'])},"
+                        f"{result['bound']},{str_number(result['load_weight'])}B,{str_number(result['load_act'])}B,{str_number(result['store_act'])}B,{str_number(result['load_kv_cache'])}B,"
+                        f"{str_number(result['store_kv_cache'])}B,{str_number_time(result['inference_time'])}s\n"
                     )
 
     def analyze(
@@ -225,9 +217,7 @@ class ModelAnalyzer:
                 load_act=ic * batchsize * seqlen * a_byte,
                 store_act=(0 if is_kv_proj else oc * batchsize * seqlen * a_byte),
                 load_kv_cache=0,
-                store_kv_cache=(
-                    0 if is_normal_proj else oc * batchsize * seqlen * kv_byte
-                ),
+                store_kv_cache=(0 if is_normal_proj else oc * batchsize * seqlen * kv_byte),
             )
 
         # for attention
@@ -235,14 +225,18 @@ class ModelAnalyzer:
         # for decode
         qk_matmul_OPs = seqlen * head_size * num_attention_heads * batchsize * 2
         sv_matmul_OPs = 1 * head_size * seqlen * num_attention_heads * batchsize * 2
+        # the softmax operation takes five steps:
+        # max_x=max(x)
+        # x=x-max_x
+        # x_exp=exp(x)
+        # sum_x_exp=sum(x_exp)
+        # y=x_exp/sum(x_exp)
         softmax_OPs = batchsize * num_attention_heads * seqlen * 1 * 5
         if use_flashattention:
             name = f"fused_attention"
             bandwidth, max_OPS, onchip_buffer = self.get_hardware_info()
             # flashattention-2 https://arxiv.org/pdf/2307.08691.pdf
-            block_size_r = min(
-                math.ceil(onchip_buffer / (kv_byte * head_size)), head_size
-            )
+            block_size_r = min(math.ceil(onchip_buffer / (kv_byte * head_size)), head_size)
             n_blocks_r = math.ceil(1 / block_size_r)
             q_numel = (1) * head_size * batchsize * num_attention_heads * a_byte
             o_numel = 1 * seqlen * batchsize * num_attention_heads * a_byte
@@ -253,12 +247,7 @@ class ModelAnalyzer:
                 load_weight=0,
                 load_act=q_numel,
                 store_act=o_numel * 2,  # initialize O and save O
-                load_kv_cache=n_blocks_r
-                * (seqlen)
-                * head_size
-                * batchsize
-                * num_attention_heads
-                * kv_byte,
+                load_kv_cache=n_blocks_r * (seqlen) * head_size * batchsize * num_attention_heads * kv_byte * 2,
                 store_kv_cache=0,
             )
 
@@ -271,11 +260,7 @@ class ModelAnalyzer:
                 load_weight=0,
                 load_act=(1) * head_size * batchsize * num_attention_heads * a_byte,
                 store_act=1 * seqlen * batchsize * num_attention_heads * a_byte,
-                load_kv_cache=(seqlen)
-                * head_size
-                * batchsize
-                * num_key_value_heads
-                * kv_byte,
+                load_kv_cache=(seqlen) * head_size * batchsize * num_key_value_heads * kv_byte,
                 store_kv_cache=0,
             )
             name = f"sv_matmul"
@@ -286,8 +271,7 @@ class ModelAnalyzer:
                 load_weight=0,
                 load_act=(1 * seqlen * batchsize * num_attention_heads) * a_byte,
                 store_act=1 * head_size * batchsize * num_attention_heads * a_byte,
-                load_kv_cache=(seqlen * head_size * batchsize * num_key_value_heads)
-                * kv_byte,
+                load_kv_cache=(seqlen * head_size * batchsize * num_key_value_heads) * kv_byte,
                 store_kv_cache=0,
             )
 
@@ -341,20 +325,14 @@ class ModelAnalyzer:
             )
 
         # for prefill
-        qk_matmul_OPs = (
-            seqlen * seqlen * head_size * num_attention_heads * batchsize * 2
-        )
-        sv_matmul_OPs = (
-            seqlen * head_size * seqlen * num_attention_heads * batchsize * 2
-        )
+        qk_matmul_OPs = seqlen * seqlen * head_size * num_attention_heads * batchsize * 2
+        sv_matmul_OPs = seqlen * head_size * seqlen * num_attention_heads * batchsize * 2
         softmax_OPs = batchsize * num_attention_heads * seqlen * seqlen * 5
         if use_flashattention:
             name = f"fused_attention"
             bandwidth, max_OPS, onchip_buffer = self.get_hardware_info()
             # flashattention-2 https://arxiv.org/pdf/2307.08691.pdf
-            block_size_r = min(
-                math.ceil(onchip_buffer / (kv_byte * head_size)), head_size
-            )
+            block_size_r = min(math.ceil(onchip_buffer / (kv_byte * head_size)), head_size)
             n_blocks_r = math.ceil(seqlen / block_size_r)
             q_numel = seqlen * head_size * batchsize * num_attention_heads * a_byte
             o_numel = seqlen * seqlen * batchsize * num_attention_heads * a_byte
@@ -365,12 +343,7 @@ class ModelAnalyzer:
                 load_weight=0,
                 load_act=q_numel,
                 store_act=o_numel * 2,  # initialize O and save O
-                load_kv_cache=n_blocks_r
-                * (seqlen)
-                * head_size
-                * batchsize
-                * num_attention_heads
-                * kv_byte,
+                load_kv_cache=n_blocks_r * (seqlen) * head_size * batchsize * num_attention_heads * kv_byte * 2,
                 store_kv_cache=0,
             )
         else:
@@ -382,11 +355,7 @@ class ModelAnalyzer:
                 load_weight=0,
                 load_act=seqlen * head_size * batchsize * num_key_value_heads * a_byte,
                 store_act=seqlen * seqlen * batchsize * num_attention_heads * a_byte,
-                load_kv_cache=seqlen
-                * head_size
-                * batchsize
-                * num_key_value_heads
-                * kv_byte,
+                load_kv_cache=seqlen * head_size * batchsize * num_key_value_heads * kv_byte,
                 store_kv_cache=0,
             )
             name = f"sv_matmul"
@@ -397,11 +366,7 @@ class ModelAnalyzer:
                 load_weight=0,
                 load_act=seqlen * seqlen * batchsize * num_attention_heads * a_byte,
                 store_act=seqlen * head_size * batchsize * num_attention_heads * a_byte,
-                load_kv_cache=seqlen
-                * head_size
-                * batchsize
-                * num_key_value_heads
-                * kv_byte,
+                load_kv_cache=seqlen * head_size * batchsize * num_key_value_heads * kv_byte,
                 store_kv_cache=0,
             )
             name = f"softmax"
@@ -457,54 +422,34 @@ class ModelAnalyzer:
         for stage in ["decode", "prefill"]:
             for layer_name, result in self.results[stage].items():
                 for data_name in ALL_DATA_NAMES:
-                    total_results[stage][data_name] += (
-                        result[data_name] * num_hidden_layers
-                    )
+                    total_results[stage][data_name] += result[data_name] * num_hidden_layers
 
         # memory footprint
-        weight_kv_footprint = (
-            total_results["prefill"]["load_weight"]
-            + total_results["prefill"]["store_kv_cache"]
-        )
+        weight_kv_footprint = total_results["prefill"]["load_weight"] + total_results["prefill"]["store_kv_cache"]
         decode_tmp_act = 0
         for layer_name, result in self.results["decode"].items():
             decode_tmp_act += result["store_act"]
-        total_results["decode"]["memory_consumption"] = (
-            decode_tmp_act + weight_kv_footprint
-        )
+        total_results["decode"]["memory_consumption"] = decode_tmp_act + weight_kv_footprint
         total_results["decode"]["memory_consumption_tmp_act"] = decode_tmp_act
-        total_results["decode"]["memory_consumption_weight"] = total_results["prefill"][
-            "load_weight"
-        ]
-        total_results["decode"]["memory_consumption_kv_cache"] = total_results[
-            "prefill"
-        ]["store_kv_cache"]
+        total_results["decode"]["memory_consumption_weight"] = total_results["prefill"]["load_weight"]
+        total_results["decode"]["memory_consumption_kv_cache"] = total_results["prefill"]["store_kv_cache"]
         prefill_tmp_act = 0
         for layer_name, result in self.results["prefill"].items():
             prefill_tmp_act += result["store_act"]
-        total_results["prefill"]["memory_consumption"] = (
-            prefill_tmp_act + weight_kv_footprint
-        )
+        total_results["prefill"]["memory_consumption"] = prefill_tmp_act + weight_kv_footprint
         total_results["prefill"]["memory_consumption_tmp_act"] = prefill_tmp_act
-        total_results["prefill"]["memory_consumption_weight"] = total_results[
-            "prefill"
-        ]["load_weight"]
-        total_results["prefill"]["memory_consumption_kv_cache"] = total_results[
-            "prefill"
-        ]["store_kv_cache"]
+        total_results["prefill"]["memory_consumption_weight"] = total_results["prefill"]["load_weight"]
+        total_results["prefill"]["memory_consumption_kv_cache"] = total_results["prefill"]["store_kv_cache"]
 
         # lm_head
         name = "lm_head"
-        args={
-            'batchsize':batchsize,
-            'a_byte':a_byte,
-            'w_byte':w_byte
-        }
+        args = {"batchsize": batchsize, "a_byte": a_byte, "w_byte": w_byte}
         for layer_info in self.config.post_process(self.model_params, args):
-            self._analyze_to_results(
-                **layer_info)
+            self._analyze_to_results(**layer_info)
             for data_name in ALL_DATA_NAMES:
-                total_results[layer_info['stage']][data_name] += self.results[layer_info['stage']][layer_info['name']][data_name]
+                total_results[layer_info["stage"]][data_name] += self.results[layer_info["stage"]][layer_info["name"]][
+                    data_name
+                ]
         # for stage in ["prefill", "decode"]:
         #     self._analyze_to_results(
         #         stage,
@@ -522,9 +467,7 @@ class ModelAnalyzer:
         self.results["total_results"] = total_results
         return self.results
 
-    def analyze_generate_task(
-        self, prompt_len, gen_len, batchsize, w_bit=16, a_bit=16, kv_bit=None
-    ):
+    def analyze_generate_task(self, prompt_len, gen_len, batchsize, w_bit=16, a_bit=16, kv_bit=None):
         prefill_result = self.analyze(prompt_len, batchsize, w_bit, a_bit, kv_bit)
         inference_time = prefill_result["total_results"]["prefill"]["inference_time"]
         for i in range(prompt_len, prompt_len + gen_len):
@@ -542,9 +485,9 @@ class ModelAnalyzer:
         return bandwidth, max_OPS, onchip_buffer
 
     def get_model_info(self):
-        if self.config.get_num_attention_heads(
+        if self.config.get_num_attention_heads(self.model_params) != self.config.get_num_key_value_heads(
             self.model_params
-        ) != self.config.get_num_key_value_heads(self.model_params):
+        ):
             GQA = True
         else:
             GQA = False
