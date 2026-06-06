@@ -17,7 +17,8 @@
     "chartjs-plugin-annotation": "^3.0.1",
     "numeral": "^2.0.6",
     "vite": "^5.1.5",
-    "vue": "^3.4.21"
+    "vue": "^3.4.21",
+    "vue-router": "^4.6.4"
   },
   "devDependencies": {
     "gh-pages": "^6.1.1"

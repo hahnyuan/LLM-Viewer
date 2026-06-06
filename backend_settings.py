@@ -16,4 +16,11 @@ avaliable_model_ids_sources = {
     # "DiT-XL/4": {"source": "DiT"},
 }
 avaliable_model_ids = [_ for _ in avaliable_model_ids_sources.keys()]
-avaliable_hardwares = [_ for _ in hardware_params.keys()]
+
+# Split the hardware list by category (single source of truth in hardware_params):
+# the LLM viewer (cloud serving) shows cloud devices, the VLA viewer (edge
+# robotics) shows edge devices. Devices without a category default to cloud.
+cloud_hardwares = [k for k, v in hardware_params.items() if v.get("category", "cloud") == "cloud"]
+edge_hardwares = [k for k, v in hardware_params.items() if v.get("category") == "edge"]
+# avaliable_hardwares is the LLM viewer's list -> cloud only.
+avaliable_hardwares = cloud_hardwares

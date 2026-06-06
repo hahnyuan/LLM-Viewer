@@ -1,5 +1,4 @@
 from model_analyzer import ModelAnalyzer
-import torch.nn as nn
 import numpy as np
 import os
 import importlib

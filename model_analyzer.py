@@ -1,10 +1,10 @@
 import os
 import importlib
 from hardwares.hardware_params import hardware_params
-from roofline_model import roofline_analyze
+from roofline_model import roofline_analyze, evaluate_op
 from transformers import AutoTokenizer, AutoConfig, AutoModelForCausalLM
 from utils import str_number, str_number_time
-import math
+from op_handlers import OpContext, OP_HANDLERS
 
 ALL_DATA_NAMES = [
     "OPs",
@@ -66,22 +66,9 @@ class ModelAnalyzer:
     ):
 
         bandwidth, max_OPS, onchip_buffer = self.get_hardware_info()
-        memory_access = load_weight + load_act + store_act + load_kv_cache + store_kv_cache
-        arithmetic_intensity, performance, bound = roofline_analyze(bandwidth, max_OPS, OPs, memory_access)
-        inference_time = OPs / performance
-        self.results[stage][name] = {
-            "OPs": OPs,
-            "memory_access": memory_access,
-            "arithmetic_intensity": arithmetic_intensity,
-            "performance": performance,
-            "bound": bound,
-            "load_weight": load_weight,
-            "load_act": load_act,
-            "store_act": store_act,
-            "load_kv_cache": load_kv_cache,
-            "store_kv_cache": store_kv_cache,
-            "inference_time": inference_time,
-        }
+        self.results[stage][name] = evaluate_op(
+            OPs, load_weight, load_act, store_act, load_kv_cache, store_kv_cache, bandwidth, max_OPS
+        )
 
     def save_csv(self, save_path=None):
         if save_path is None:
@@ -197,225 +184,58 @@ class ModelAnalyzer:
         num_key_value_heads = config.get_num_key_value_heads(model_params)
         num_hidden_layers = config.get_num_hidden_layers(model_params)
 
-        for name, (ic, oc) in config.get_linear_layers(model_params, tp_size).items():
-            # for linear layers
-            is_kv_proj = name in ["k_proj", "v_proj"]
-            is_normal_proj = not is_kv_proj
-            self._analyze_to_results(
-                "decode",
-                name,
-                OPs=ic * oc * batchsize * 2,
-                load_weight=ic * oc * w_byte,
-                load_act=ic * batchsize * a_byte,
-                store_act=0 if is_kv_proj else oc * batchsize * a_byte,
-                load_kv_cache=0,
-                store_kv_cache=(0 if is_normal_proj else oc * batchsize * kv_byte),
-            )
-            # for prefill
-            self._analyze_to_results(
-                "prefill",
-                name,
-                OPs=ic * oc * batchsize * seqlen * 2,
-                load_weight=ic * oc * w_byte,
-                load_act=ic * batchsize * seqlen * a_byte,
-                store_act=(0 if is_kv_proj else oc * batchsize * seqlen * a_byte),
-                load_kv_cache=0,
-                store_kv_cache=(0 if is_normal_proj else oc * batchsize * seqlen * kv_byte),
-            )
-
-        # for attention
         head_size = hidden_size // num_attention_heads
-        # for decode
-        qk_matmul_OPs = seqlen * head_size * num_attention_heads * batchsize * 2
-        sv_matmul_OPs = 1 * head_size * seqlen * num_attention_heads * batchsize * 2
-        # the softmax operation takes five steps:
-        # max_x=max(x)
-        # x=x-max_x
-        # x_exp=exp(x)
-        # sum_x_exp=sum(x_exp)
-        # y=x_exp/sum(x_exp)
-        softmax_OPs = batchsize * num_attention_heads * seqlen * 1 * 5
-        if use_flashattention:
-            name = f"fused_attention"
-            bandwidth, max_OPS, onchip_buffer = self.get_hardware_info()
-            # flashattention-2 https://arxiv.org/pdf/2307.08691.pdf
-            block_size_r = min(math.ceil(onchip_buffer / (kv_byte * head_size)), head_size)
-            n_blocks_r = math.ceil(1 / block_size_r)
-            q_numel = (1) * head_size * batchsize * num_attention_heads * a_byte
-            o_numel = 1 * seqlen * batchsize * num_attention_heads * a_byte
-            self._analyze_to_results(
-                "decode",
-                name,
-                OPs=qk_matmul_OPs + sv_matmul_OPs + softmax_OPs,
-                load_weight=0,
-                load_act=q_numel,
-                store_act=o_numel * 2,  # initialize O and save O
-                load_kv_cache=n_blocks_r * (seqlen) * head_size * batchsize * num_key_value_heads * kv_byte * 2,
-                store_kv_cache=0,
-            )
+        _, _, onchip_buffer = self.get_hardware_info()
+        ctx = OpContext(
+            batchsize=batchsize,
+            a_byte=a_byte,
+            w_byte=w_byte,
+            kv_byte=kv_byte,
+            hidden_size=hidden_size,
+            num_attention_heads=num_attention_heads,
+            num_key_value_heads=num_key_value_heads,
+            head_size=head_size,
+            onchip_buffer=onchip_buffer,
+        )
 
-        else:
-            name = f"qk_matmul"
-            self._analyze_to_results(
-                "decode",
-                name,
-                OPs=qk_matmul_OPs,
-                load_weight=0,
-                load_act=(1) * head_size * batchsize * num_attention_heads * a_byte,
-                store_act=1 * seqlen * batchsize * num_attention_heads * a_byte,
-                load_kv_cache=(seqlen) * head_size * batchsize * num_key_value_heads * kv_byte,
-                store_kv_cache=0,
-            )
-            name = f"sv_matmul"
-            self._analyze_to_results(
-                "decode",
-                name,
-                OPs=sv_matmul_OPs,
-                load_weight=0,
-                load_act=(1 * seqlen * batchsize * num_attention_heads) * a_byte,
-                store_act=1 * head_size * batchsize * num_attention_heads * a_byte,
-                load_kv_cache=(seqlen * head_size * batchsize * num_key_value_heads) * kv_byte,
-                store_kv_cache=0,
-            )
+        # query tokens processed per step; key/value tokens attended over.
+        # (decode processes 1 query token against the full context.)
+        stage_seqlens = {
+            "decode": (1, seqlen),
+            "prefill": (seqlen, seqlen),
+        }
 
-            name = f"softmax"
-            # max sub exp sum div
-            self._analyze_to_results(
-                "decode",
-                name,
-                OPs=softmax_OPs,
-                load_weight=0,
-                load_act=batchsize * num_attention_heads * seqlen * 1 * a_byte,
-                store_act=batchsize * num_attention_heads * seqlen * 1 * a_byte,
-                load_kv_cache=0,
-                store_kv_cache=0,
-            )
+        def dispatch(stage, name, op_type, **kw):
+            q_seqlen, kv_seqlen = stage_seqlens[stage]
+            res = OP_HANDLERS[op_type](ctx, q_seqlen, kv_seqlen, **kw)
+            self._analyze_to_results(stage, name, **res)
 
-        for name in config.get_norm_layers(model_params):
-            # sum sub pow sum div mul add
-            self._analyze_to_results(
-                "decode",
-                name,
-                OPs=batchsize * hidden_size * 1 * 7,
-                load_weight=0,
-                load_act=batchsize * hidden_size * 1 * a_byte,
-                store_act=batchsize * hidden_size * 1 * a_byte,
-                load_kv_cache=0,
-                store_kv_cache=0,
-            )
+        # Linear projections. Both stages receive the same set of layers, in
+        # get_linear_layers() order (q, k, v, out, gate, up, down).
+        for name, (ic, oc) in config.get_linear_layers(model_params, tp_size).items():
+            is_kv_proj = name in ["k_proj", "v_proj"]
+            for stage in ["decode", "prefill"]:
+                dispatch(stage, name, "linear", ic=ic, oc=oc, is_kv_proj=is_kv_proj)
 
-        for name in ["attn_add", "mlp_add"]:
-            self._analyze_to_results(
-                "decode",
-                name,
-                OPs=batchsize * hidden_size * 1,
-                load_weight=0,
-                load_act=batchsize * hidden_size * 1 * a_byte,
-                store_act=batchsize * hidden_size * 1 * a_byte,
-                load_kv_cache=0,
-                store_kv_cache=0,
-            )
-        for name in ["mlp_act"]:
-            self._analyze_to_results(
-                "decode",
-                name,
-                OPs=batchsize * hidden_size * 1 * 2,
-                load_weight=0,
-                load_act=batchsize * hidden_size * 1 * a_byte * 2,
-                store_act=batchsize * hidden_size * 1 * a_byte,
-                load_kv_cache=0,
-                store_kv_cache=0,
-            )
-
-        # for prefill
-        qk_matmul_OPs = seqlen * seqlen * head_size * num_attention_heads * batchsize * 2
-        sv_matmul_OPs = seqlen * head_size * seqlen * num_attention_heads * batchsize * 2
-        softmax_OPs = batchsize * num_attention_heads * seqlen * seqlen * 5
-        if use_flashattention:
-            name = f"fused_attention"
-            bandwidth, max_OPS, onchip_buffer = self.get_hardware_info()
-            # flashattention-2 https://arxiv.org/pdf/2307.08691.pdf
-            block_size_r = min(math.ceil(onchip_buffer / (kv_byte * head_size)), head_size)
-            n_blocks_r = math.ceil(seqlen / block_size_r)
-            q_numel = seqlen * head_size * batchsize * num_attention_heads * a_byte
-            o_numel = seqlen * seqlen * batchsize * num_attention_heads * a_byte
-            self._analyze_to_results(
-                "prefill",
-                name,
-                OPs=qk_matmul_OPs + sv_matmul_OPs + softmax_OPs,
-                load_weight=0,
-                load_act=q_numel,
-                store_act=o_numel * 2,  # initialize O and save O
-                load_kv_cache=n_blocks_r * (seqlen) * head_size * batchsize * num_key_value_heads * kv_byte * 2,
-                store_kv_cache=0,
-            )
-        else:
-            name = f"qk_matmul"
-            self._analyze_to_results(
-                "prefill",
-                name,
-                OPs=qk_matmul_OPs,
-                load_weight=0,
-                load_act=seqlen * head_size * batchsize * num_key_value_heads * a_byte,
-                store_act=seqlen * seqlen * batchsize * num_attention_heads * a_byte,
-                load_kv_cache=seqlen * head_size * batchsize * num_key_value_heads * kv_byte,
-                store_kv_cache=0,
-            )
-            name = f"sv_matmul"
-            self._analyze_to_results(
-                "prefill",
-                name,
-                OPs=sv_matmul_OPs,
-                load_weight=0,
-                load_act=seqlen * seqlen * batchsize * num_attention_heads * a_byte,
-                store_act=seqlen * head_size * batchsize * num_attention_heads * a_byte,
-                load_kv_cache=seqlen * head_size * batchsize * num_key_value_heads * kv_byte,
-                store_kv_cache=0,
-            )
-            name = f"softmax"
-            self._analyze_to_results(
-                "prefill",
-                name,
-                OPs=softmax_OPs,
-                load_weight=0,
-                load_act=batchsize * num_attention_heads * seqlen * seqlen * a_byte,
-                store_act=batchsize * num_attention_heads * seqlen * seqlen * a_byte,
-                load_kv_cache=0,
-                store_kv_cache=0,
-            )
-        for name in config.get_norm_layers(model_params):
-            self._analyze_to_results(
-                "prefill",
-                name,
-                OPs=batchsize * hidden_size * seqlen * 7,
-                load_weight=0,
-                load_act=batchsize * hidden_size * seqlen * a_byte,
-                store_act=batchsize * hidden_size * seqlen * a_byte,
-                load_kv_cache=0,
-                store_kv_cache=0,
-            )
-        for name in ["attn_add", "mlp_add"]:
-            self._analyze_to_results(
-                "prefill",
-                name,
-                OPs=batchsize * hidden_size * seqlen * 1,
-                load_weight=0,
-                load_act=batchsize * hidden_size * seqlen * a_byte,
-                store_act=batchsize * hidden_size * seqlen * a_byte,
-                load_kv_cache=0,
-                store_kv_cache=0,
-            )
-        for name in ["mlp_act"]:
-            self._analyze_to_results(
-                "prefill",
-                name,
-                OPs=batchsize * hidden_size * seqlen * 1 * 2,
-                load_weight=0,
-                load_act=batchsize * hidden_size * seqlen * a_byte * 2,
-                store_act=batchsize * hidden_size * seqlen * a_byte,
-                load_kv_cache=0,
-                store_kv_cache=0,
-            )
+        # Remaining per-layer transformer ops. The decode block is fully emitted
+        # before the prefill block, matching the original insertion order so the
+        # aggregated totals stay bit-identical.
+        for stage in ["decode", "prefill"]:
+            if use_flashattention:
+                dispatch(stage, "fused_attention", "fused_attention")
+            else:
+                # Preserve the legacy Q-activation head count (see qk_matmul):
+                # attention-heads in decode, key-value-heads in prefill.
+                legacy_q_heads = num_attention_heads if stage == "decode" else num_key_value_heads
+                dispatch(stage, "qk_matmul", "qk_matmul", query_act_heads=legacy_q_heads)
+                dispatch(stage, "sv_matmul", "sv_matmul")
+                dispatch(stage, "softmax", "softmax")
+            for name in config.get_norm_layers(model_params):
+                dispatch(stage, name, "norm")
+            for name in ["attn_add", "mlp_add"]:
+                dispatch(stage, name, "add")
+            for name in ["mlp_act"]:
+                dispatch(stage, name, "act")
 
         # compute total
         total_results = {"decode": {}, "prefill": {}}
@@ -498,12 +318,19 @@ class ModelAnalyzer:
         return {"inference_time": inference_time, "prefill_time": prefill_time}
 
     def get_hardware_info(self):
-        bandwidth = hardware_params[self.hardware]["bandwidth"]
-        if self.w_bit <= 8 and self.a_bit <= 8 and self.kv_bit <= 8:
-            max_OPS = hardware_params[self.hardware]["INT8"]
+        params = hardware_params[self.hardware]
+        bandwidth = params["bandwidth"]
+        # Pick the peak-throughput tier for the lowest common bitwidth the
+        # hardware actually supports, falling back up the precision ladder when
+        # a tier is absent (e.g. Hopper has no INT4; intel has only FP16).
+        max_bit = max(self.w_bit, self.a_bit, self.kv_bit)
+        if max_bit <= 4 and "INT4" in params:
+            max_OPS = params["INT4"]
+        elif max_bit <= 8 and "INT8" in params:
+            max_OPS = params["INT8"]
         else:
-            max_OPS = hardware_params[self.hardware]["FP16"]
-        onchip_buffer = hardware_params[self.hardware]["onchip_buffer"]
+            max_OPS = params["FP16"]
+        onchip_buffer = params["onchip_buffer"]
         return bandwidth, max_OPS, onchip_buffer
 
     def get_model_info(self):
